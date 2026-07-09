@@ -1,0 +1,16 @@
+{
+  "generator": "khnum",
+  "kind": "sram_2r1w",
+  "name": "khnum_sram_2r1w_64x64",
+  "depth": 64,
+  "width": 64,
+  "byte_en": false,
+  "addr_width": 6,
+  "write_lanes": 1,
+  "read_latency": 1,
+  "rdw_behavior": "read-first (old data)",
+  "views": [
+    "rtl",
+    "tb"
+  ]
+}
