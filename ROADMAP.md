@@ -1,0 +1,115 @@
+# Khnum Roadmap — the path to the top open-source memory project
+
+Rules of this file:
+- A box is checked **only** when `python3 tools/test_all.py` exits 0 with the feature
+  covered by at least one matrix entry, and the work is **merged to main via PR**.
+- "Partial" is not "done". Never check a box for scaffolding.
+- Every phase ends with a checkpoint commit updating this file + STATUS.md.
+
+---
+
+## P0 — Genesis ✅ (completed 2026-07-10)
+
+- [x] Package skeleton (`khnum/`), zero dependencies, Python 3 stdlib only
+- [x] `Config` validation (depth 2–2^24, width 1–4096, byte-en requires width%8==0)
+- [x] RTL emitters: `sram_1rw`, `sram_1r1w`, `sram_2r1w` (Verilog-2001, read-first,
+      byte-enable lanes, non-power-of-2 depths)
+- [x] Self-checking TB emitter per instance (shadow model, init sweep + random phase +
+      final sweep, `KHNUM_TB_PASS` protocol)
+- [x] Manifest JSON per instance
+- [x] Non-blocking CLI (`gen`, `list`, `--version`), argparse, exit codes
+- [x] `tools/test_all.py`: CLI hygiene + 7-config matrix × (gen, manifest, lint -Wall
+      zero-warning, Verilator --binary --timing sim) — **ALL GREEN**
+- [x] README, ROADMAP, STATUS, CLAUDE.md handoff, LICENSE (Apache-2.0), CONTRIBUTING
+
+## P1 — The Potter's Wheel (memory suite)
+
+Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
+
+- [ ] `rf_2r1w_ff`: flop-based register file with **asynchronous** read (combinational
+      rdata), for depths ≤ 64 — the CPU-register-file workhorse
+- [ ] `fifo_sync`: single-clock FIFO (depth, width, registered output; full/empty/level;
+      TB must cover full & empty boundary + simultaneous push/pop)
+- [ ] `fifo_async`: dual-clock FIFO — gray-coded pointers, 2-FF synchronizers;
+      TB with two independent clocks (7 ns / 11 ns) hammering CDC
+- [ ] `ecc_secded`: Hamming SECDED encode/decode modules + `--ecc` wrapper option on
+      sram kinds (data widths 8/16/32/64; single-error corrected, double-error detected;
+      TB injects 1-bit and 2-bit faults and checks correction/detection flags)
+- [ ] Banking composer: `--bank-depth N` / `--bank-width N` emit a wrapper that tiles
+      base macros (address-decode deep tiling, lane-concat wide tiling); manifest lists
+      the hierarchy
+- [ ] Extend `tools/test_all.py` matrix to cover every new kind/option (target ≥ 16
+      matrix entries), keep lint -Wall zero-warning
+- [ ] README: move shipped items out of "roadmap" column honestly
+
+## P2 — The Proof (verification-first)
+
+Goal: Khnum's headline differentiator — proofs, not promises.
+
+- [ ] cocotb testbenches (`tests/cocotb/`), SIM=verilator, one suite per kind —
+      mirror KemetCore's proven Makefile pattern
+- [ ] Formal properties embedded in generated RTL under `` `ifdef FORMAL `` (no `bind` —
+      yosys 0.6x has none): rdata matches a golden shadow process, write lanes only
+      change masked bytes, FIFO never overflows/underflows, gray pointers change 1 bit
+- [ ] `tools/formal.py`: runs yowasp-yosys → `async2sync` → `write_smt2` → yowasp-yosys-smtbmc
+      (z3). **MANDATORY: count assertions in the SMT2 output; a proof with 0 assertions
+      is VACUOUS and counts as FAIL** (KemetCore lesson — 8/11 "proofs" once checked nothing)
+- [ ] Mutation testing: `tools/mutate.py` flips one operator/constant per run and requires
+      the formal proof (or TB) to FAIL — a proof that survives mutations is broken
+- [ ] CI: GitHub Actions running test_all + formal on every PR (ubuntu-latest, apt
+      verilator, pip yowasp-yosys)
+
+## P3 — The FPGA Gate
+
+Goal: prove the "one config → FPGA and ASIC" claim mechanically.
+
+- [ ] `tools/test_fpga.py`: run yowasp-yosys `synth_xilinx` and `synth_ice40` on each
+      generated SRAM; parse the report; **require BRAM/SPRAM inference** (RAMB18/36 or
+      SB_RAM40_4K / SPRAM cells present, zero flip-flop-array fallback for depths ≥ 256)
+- [ ] Fix any inference blockers found (init values, enable structure) without breaking
+      the P0/P1 test matrix
+- [ ] Document per-kind inference results in `docs/FPGA.md`
+
+## P4 — The Foundry (ASIC hardening, 16 GB-safe)
+
+Goal: DFFRAM-style standard-cell hardening through OpenROAD/ORFS with recipes that
+peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules).
+
+- [ ] `harden/` directory: ORFS config per showcase size (e.g. 256×32, 1K×32, 2K×64)
+      for **sky130hd** using the local Docker openroad/orfs image (same as KemetCore
+      `flow/harden.sh` pattern)
+- [ ] `tools/harden.sh`: wraps Docker with `--memory=13g --memory-swap=24g`
+      (Docker-swap OOM lesson) and produces GDS + DEF + reports into `harden/results/`
+- [ ] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
+      utilization, routing effort) — the 16 GB promise is a release gate
+- [ ] GDS gallery in `docs/GALLERY.md` (screenshots via ORFS klayout export)
+- [ ] Stretch: ASAP7 variants (KemetCore flow already proves local ASAP7 works)
+- [ ] Liberty/LEF abstract stubs emitted alongside GDS for SoC integration
+
+## P5 — The Scribe (docs, demo, characterization)
+
+- [ ] `docs/CHARACTERIZATION.md`: area/timing tables per size from ORFS reports,
+      auto-generated by `tools/characterize.py`
+- [ ] **Terminal demo GIF (MANDATORY house rule)**: VHS tape in `docs/demo.tape`,
+      GIF embedded at the top of README — every Lord1Egypt CLI project has one
+- [ ] gh-pages landing site (same pattern as KemetCore's)
+- [ ] `docs/INTEGRATION.md`: how to drop Khnum memories into a SoC (KemetCore cores as
+      worked examples)
+
+## P6 — Ascension (v1.0.0)
+
+- [ ] `pyproject.toml` finalized; publish **khnum-ram** to PyPI (token in
+      `~/.skillforge_tokens`; follow Seshat's release playbook)
+- [ ] `pip install khnum-ram` → `khnum` console script works
+- [ ] GitHub Release v1.0.0 with changelog
+- [ ] README final pass: every claim true, comparison table updated, demo GIF live
+- [ ] Announce-ready: repo About, topics, social preview
+
+---
+
+## Checkpoint protocol (for every phase)
+
+1. Branch `feat/<phase-item>` → implement → `python3 tools/test_all.py` exits 0.
+2. Update ROADMAP checkboxes + STATUS.md "RESUME HERE" block **in the same PR**.
+3. PR → merge (Co-Authored-By trailer for Pair Extraordinaire) → delete branch.
+4. Never leave main red. Never claim a box that test_all doesn't prove.
