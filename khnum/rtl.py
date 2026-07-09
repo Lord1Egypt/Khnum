@@ -15,7 +15,9 @@ Design rules (do not break these — they are what makes Khnum portable):
 import json
 import math
 
-KINDS = ("sram_1rw", "sram_1r1w", "sram_2r1w")
+KINDS = ("sram_1rw", "sram_1r1w", "sram_2r1w", "rf_2r1w_ff", "fifo_sync", "fifo_async")
+
+RF_MAX_DEPTH = 64  # flop-based register files get expensive fast
 
 
 class Config:
@@ -30,6 +32,14 @@ class Config:
             raise ValueError("width must be in [1, 4096], got %d" % width)
         if byte_en and width % 8 != 0:
             raise ValueError("--byte-en requires width to be a multiple of 8, got %d" % width)
+        if kind == "rf_2r1w_ff" and depth > RF_MAX_DEPTH:
+            raise ValueError("rf_2r1w_ff is flop-based; depth capped at %d (use sram_2r1w "
+                             "for deeper arrays), got %d" % (RF_MAX_DEPTH, depth))
+        if kind.startswith("fifo") and byte_en:
+            raise ValueError("--byte-en makes no sense on FIFOs (whole words only)")
+        if kind == "fifo_async" and (depth < 4 or depth & (depth - 1)):
+            raise ValueError("fifo_async requires power-of-2 depth >= 4 (gray-coded "
+                             "pointers), got %d" % depth)
         self.kind = kind
         self.depth = depth
         self.width = width
@@ -39,6 +49,7 @@ class Config:
         self.lanes = width // 8 if byte_en else 1
 
     def manifest(self):
+        async_read = self.kind in ("rf_2r1w_ff", "fifo_sync", "fifo_async")
         return {
             "generator": "khnum",
             "kind": self.kind,
@@ -48,8 +59,9 @@ class Config:
             "byte_en": self.byte_en,
             "addr_width": self.aw,
             "write_lanes": self.lanes,
-            "read_latency": 1,
-            "rdw_behavior": "read-first (old data)",
+            "read_latency": 0 if async_read else 1,
+            "rdw_behavior": "first-word-fall-through" if self.kind.startswith("fifo")
+                            else "read-first (old data)",
             "views": ["rtl", "tb"],
         }
 
@@ -86,7 +98,44 @@ def emit_rtl(cfg):
         return _emit_sram_1rw(cfg)
     if cfg.kind == "sram_1r1w":
         return _emit_sram_1r1w(cfg)
-    return _emit_sram_2r1w(cfg)
+    if cfg.kind == "sram_2r1w":
+        return _emit_sram_2r1w(cfg)
+    if cfg.kind == "rf_2r1w_ff":
+        return _emit_rf_2r1w_ff(cfg)
+    from .fifo import emit_fifo
+    return emit_fifo(cfg)
+
+
+def _emit_rf_2r1w_ff(cfg):
+    mask_port = "  input  wire [%d:0]  wmask,   // per-byte write lane enable\n" % (cfg.lanes - 1) if cfg.byte_en else ""
+    doc = "// Flop-based register file: 1 write port + 2 ASYNC (combinational) read ports.\n"
+    lane_decl = "  integer lane;\n" if cfg.byte_en else ""
+    body = _write_block(cfg, "we", "waddr", "wdata", "wmask")
+    return _header(cfg, doc) + (
+        "module %s (\n"
+        "  input  wire         clk,\n"
+        "  input  wire         we,\n"
+        "  input  wire [%d:0]  waddr,\n"
+        "  input  wire [%d:0]  wdata,\n"
+        "%s"
+        "  input  wire [%d:0]  raddr0,\n"
+        "  output wire [%d:0]  rdata0,  // asynchronous read, latency 0\n"
+        "  input  wire [%d:0]  raddr1,\n"
+        "  output wire [%d:0]  rdata1   // asynchronous read, latency 0\n"
+        ");\n"
+        "  reg [%d:0] mem [0:%d];\n"
+        "%s"
+        "  always @(posedge clk) begin\n"
+        "%s"
+        "  end\n"
+        "  assign rdata0 = mem[raddr0];\n"
+        "  assign rdata1 = mem[raddr1];\n"
+        "endmodule\n"
+        % (cfg.name, cfg.aw - 1, cfg.width - 1, mask_port, cfg.aw - 1,
+           cfg.width - 1, cfg.aw - 1, cfg.width - 1,
+           cfg.width - 1, cfg.depth - 1, lane_decl,
+           _indent_write(body))
+    )
 
 
 def _emit_sram_1rw(cfg):

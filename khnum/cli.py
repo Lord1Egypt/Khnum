@@ -39,7 +39,10 @@ def _cmd_list(_args):
     descriptions = {
         "sram_1rw": "single-port SRAM: one shared read/write port, sync read",
         "sram_1r1w": "simple dual-port SRAM: 1 write + 1 read port, sync read",
-        "sram_2r1w": "register-file-style: 1 write + 2 read ports, sync read",
+        "sram_2r1w": "register-file-style SRAM: 1 write + 2 read ports, sync read",
+        "rf_2r1w_ff": "flop register file: 1 write + 2 ASYNC read ports (depth <= 64)",
+        "fifo_sync": "single-clock FIFO: FWFT, full/empty/level flags",
+        "fifo_async": "dual-clock CDC FIFO: gray pointers + 2-FF sync (pow2 depth >= 4)",
     }
     for kind in KINDS:
         print("  %-10s  %s" % (kind, descriptions[kind]))

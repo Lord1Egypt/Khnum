@@ -31,6 +31,12 @@ MATRIX = [
     ("sram_1r1w", 64, 64, True),
     ("sram_2r1w", 32, 32, False),
     ("sram_2r1w", 64, 24, True),
+    ("rf_2r1w_ff", 32, 32, False),
+    ("rf_2r1w_ff", 64, 24, True),
+    ("fifo_sync", 16, 8, False),
+    ("fifo_sync", 100, 16, False),
+    ("fifo_async", 8, 8, False),
+    ("fifo_async", 64, 32, False),
 ]
 
 FAILURES = []
@@ -70,6 +76,21 @@ def test_cli_hygiene():
          "--width", "8", "-o", os.path.join(BUILD, "bad")],
         cwd=ROOT, expect_rc=2)
     check("reject depth<2 (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "rf_2r1w_ff", "--depth", "128",
+         "--width", "32", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject rf depth>64 (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "fifo_async", "--depth", "24",
+         "--width", "8", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject non-pow2 async fifo depth (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "fifo_sync", "--depth", "16",
+         "--width", "16", "--byte-en", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject byte-en on fifo (exit 2)", ok, out)
 
 
 def test_config(kind, depth, width, byte_en):
