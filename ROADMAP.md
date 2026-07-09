@@ -26,12 +26,12 @@ Rules of this file:
 
 Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
 
-- [ ] `rf_2r1w_ff`: flop-based register file with **asynchronous** read (combinational
-      rdata), for depths ≤ 64 — the CPU-register-file workhorse
-- [ ] `fifo_sync`: single-clock FIFO (depth, width, registered output; full/empty/level;
-      TB must cover full & empty boundary + simultaneous push/pop)
-- [ ] `fifo_async`: dual-clock FIFO — gray-coded pointers, 2-FF synchronizers;
-      TB with two independent clocks (7 ns / 11 ns) hammering CDC
+- [x] `rf_2r1w_ff`: flop-based register file with **asynchronous** read (combinational
+      rdata), for depths ≤ 64 — the CPU-register-file workhorse (PR #2)
+- [x] `fifo_sync`: single-clock FIFO (FWFT, full/empty/level; TB covers full & empty
+      boundaries, ignored ops, simultaneous push/pop) (PR #2)
+- [x] `fifo_async`: dual-clock FIFO — gray-coded pointers (Cummings), 2-FF synchronizers;
+      TB with coprime #7/#11 clocks, 2000-word order check, watchdog (PR #2)
 - [ ] `ecc_secded`: Hamming SECDED encode/decode modules + `--ecc` wrapper option on
       sram kinds (data widths 8/16/32/64; single-error corrected, double-error detected;
       TB injects 1-bit and 2-bit faults and checks correction/detection flags)

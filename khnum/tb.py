@@ -77,7 +77,12 @@ def emit_tb(cfg, n_random=600):
         return _emit_tb_1rw(cfg, n_random)
     if cfg.kind == "sram_1r1w":
         return _emit_tb_1r1w(cfg, n_random)
-    return _emit_tb_2r1w(cfg, n_random)
+    if cfg.kind == "sram_2r1w":
+        return _emit_tb_2r1w(cfg, n_random)
+    if cfg.kind == "rf_2r1w_ff":
+        return _emit_tb_rf_2r1w_ff(cfg, n_random)
+    from .fifo import emit_fifo_tb
+    return emit_fifo_tb(cfg, n_random)
 
 
 def _common_head(cfg):
@@ -184,6 +189,42 @@ def _emit_tb_1r1w(cfg, n_random):
         "%s"
         "    end\n"
         "  endtask\n" % _check(cfg, "rdata", "ta", "1r1w")
+    )
+    return head + decls + wr + rd + _epilogue(n_random)
+
+
+def _emit_tb_rf_2r1w_ff(cfg, n_random):
+    head = _common_head(cfg)
+    decls = (
+        "  reg we = 0;\n"
+        "  reg [AW-1:0] waddr = 0, raddr0 = 0, raddr1 = 0;\n"
+        "  reg [WIDTH-1:0] wdata = 0;\n"
+        "  wire [WIDTH-1:0] rdata0, rdata1;\n"
+        "  %s dut (\n"
+        "    .clk(clk), .we(we), .waddr(waddr), .wdata(wdata),\n"
+        "%s"
+        "    .raddr0(raddr0), .rdata0(rdata0),\n"
+        "    .raddr1(raddr1), .rdata1(rdata1)\n"
+        "  );\n" % (cfg.name, _mask_conn(cfg))
+    )
+    wr = _wr_task(
+        cfg,
+        "      we = 1; waddr = ta; wdata = td;\n",
+        "      we = 0;\n",
+    )
+    rd = (
+        "  reg [AW-1:0] b;\n"
+        "  task rd(input [AW-1:0] ta);\n"
+        "    begin\n"
+        "      b = $urandom %% DEPTH;\n"
+        "      @(negedge clk);\n"
+        "      raddr0 = ta; raddr1 = b;\n"
+        "      #1;   // combinational settle — async read has 0-cycle latency\n"
+        "%s"
+        "%s"
+        "    end\n"
+        "  endtask\n"
+        % (_check(cfg, "rdata0", "ta", "rf.p0"), _check(cfg, "rdata1", "b", "rf.p1"))
     )
     return head + decls + wr + rd + _epilogue(n_random)
 
