@@ -6,8 +6,9 @@
 **Khnum is a zero-dependency, laptop-class, open-source memory compiler.**
 One command gives you verified, synthesizable RTL for SRAMs, register files, FIFOs,
 ECC-protected memories and banked/tiled composites — each instance shipped **with its own
-self-checking testbench, manifest, and (roadmap) formal proof and OpenROAD hardening
-recipe** — and the whole flow is engineered to fit in **16 GB of RAM**.
+self-checking testbench, manifest, embedded formal proof (yosys+z3, vacuity-checked,
+mutation-tested), and (roadmap) OpenROAD hardening recipe** — and the whole flow is
+engineered to fit in **16 GB of RAM**.
 
 ```
 $ python3 -m khnum gen --kind sram_1rw --depth 1024 --width 32 --byte-en
@@ -33,7 +34,7 @@ a niche neither covers:
 | Memory kinds | **SRAM 1RW / 1R1W / 2R1W, flop register file, sync + async (CDC) FIFO, ECC SECDED, banked/tiled composites — all shipping today** | SRAM | RAM / register file |
 | Self-checking TB per generated instance | ✅ always, automatically | partial | — |
 | Lint-clean guarantee (`verilator -Wall`) | ✅ CI-enforced | — | — |
-| Formal proof per instance | 🔜 roadmap P2 (yosys-smtbmc + z3, vacuity-checked) | — | — |
+| Formal proof per instance | ✅ embedded in every SRAM/FIFO instance, discharged via yosys-smtbmc + z3, vacuity-checked, mutation-tested | — | — |
 | ECC (SECDED) option | ✅ `--ecc` on any SRAM (single-correct, double-detect) | — | — |
 | FPGA + ASIC from one config | ✅ portable RTL (BRAM-inference verified in P3) | ASIC only | ASIC only |
 | PDK strategy | portable RTL + OpenROAD/ORFS hardening recipes (Sky130, ASAP7) — P4 | Sky130 / SCMOS / FreePDK45 | Sky130 |
@@ -111,9 +112,14 @@ A memory generator you can't trust is worse than no generator. Khnum's rule:
 - `tools/test_all.py` — full matrix: CLI hygiene, generation, manifest sanity,
   `verilator --lint-only -Wall` (zero warnings tolerated), Verilator simulation of every
   testbench (init sweep → randomized reads/writes with random byte masks → full readback).
-- Roadmap P2 adds **cocotb** suites and **formal proofs** (yosys-smtbmc + z3) with
-  *vacuity checking* — every proof is validated to actually check assertions, and
-  *mutation-tested* — we break the RTL on purpose and require the proof to fail.
+- `tools/formal.py` — every SRAM/FIFO instance ships an embedded formal proof
+  (yosys-smtbmc + z3): SRAM read-first (full-word AND per-byte-lane), FIFO occupancy
+  never over/underflows, async-FIFO gray pointers stay valid gray encodings. Every proof
+  is *vacuity-checked* — validated to actually contain assertions — and *mutation-tested*
+  — we break the RTL on purpose and require the proof to fail.
+- `tests/cocotb/` — one Python-driven cocotb suite per kind (`make CORE=<kind>`), each
+  checking an independent golden model against real simulation — a third, unrelated
+  verification method alongside the Verilog self-checking TB and the formal proofs.
 
 ## The 16 GB promise
 
@@ -129,7 +135,8 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan with checklists, and
 
 - **P0 Genesis** ✅ — core compiler, 3 SRAM kinds, TB-per-instance, full test harness
 - **P1 The Potter's Wheel** ✅ — flop register file, sync/async FIFOs (gray-coded CDC), ECC SECDED, banked/tiled composites
-- **P2 The Proof** — cocotb suites, formal properties + non-vacuous mutation-tested proofs
+- **P2 The Proof** ✅ — cocotb suites (one per kind), formal properties (read-first,
+  byte-lane, FIFO occupancy, gray-pointer) all non-vacuous and mutation-tested
 - **P3 The FPGA Gate** — automated BRAM-inference verification (yosys synth_xilinx / synth_ice40)
 - **P4 The Foundry** — OpenROAD/ORFS hardening recipes (Sky130 → ASAP7), 16 GB-safe, GDS gallery
 - **P5 The Scribe** — characterization tables, docs site, terminal demo GIF

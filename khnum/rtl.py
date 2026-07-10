@@ -174,9 +174,8 @@ def emit_rtl(cfg):
     else:
         from .fifo import emit_fifo
         return emit_fifo(cfg)
-    # Embed the read-first formal proof on full-word SRAM writes (P2).
-    if not cfg.byte_en:
-        text = _splice_formal(text, _formal_for(cfg))
+    # Embed the read-first formal proof (full-word or per-byte-lane) (P2).
+    text = _splice_formal(text, _formal_for(cfg))
     return text
 
 
@@ -320,8 +319,9 @@ def _indent_write(block):
 # PRE-write shadow value on every read of that address (read-first), and assert
 # the registered rdata matches one cycle later. `tools/formal.py` discharges it
 # with yosys+z3 (async2sync, vacuity-counted) and `tools/mutate.py` proves it is
-# non-vacuous. Byte-enable variants need per-lane valid tracking (P2 follow-up),
-# so the block is emitted only for full-word writes.
+# non-vacuous. Byte-enable variants use `_formal_sram_be`: the scoreboard tracks
+# validity and expected data PER LANE, since a masked write updates only some
+# lanes (a naive full-word model provably FAILS on --byte-en).
 
 def _splice_formal(text, fblock):
     i = text.rstrip().rfind("endmodule")
@@ -358,12 +358,54 @@ def _formal_sram(cfg, read_ports, wr_cond, wr_addr):
     return "\n".join(L) + "\n"
 
 
+def _formal_sram_be(cfg, read_ports, wr_cond, wr_addr):
+    """Per-byte-lane read-first scoreboard. A masked write updates only the
+    lanes whose wmask bit is set, so validity and expected data are tracked per
+    lane; the full-word `_formal_sram` model provably fails on --byte-en."""
+    aw, w, lanes = cfg.aw, cfg.width, cfg.lanes
+    L = []
+    L.append("`ifdef FORMAL")
+    L.append("  // Khnum read-first byte-lane proof: per-lane symbolic-address scoreboard.")
+    L.append("  (* anyconst *) reg [%d:0] f_addr;" % (aw - 1))
+    L.append("  reg [%d:0] f_data;" % (w - 1))
+    L.append("  reg [%d:0] f_valid = %d'b0;" % (lanes - 1, lanes))
+    for suf, _, _ in read_ports:
+        L.append("  reg        f_rd%s = 1'b0;" % suf)
+        L.append("  reg [%d:0] f_exp%s;" % (w - 1, suf))
+        L.append("  reg [%d:0] f_ev%s = %d'b0;" % (lanes - 1, suf, lanes))
+    L.append("  integer fl;")
+    L.append("  always @(posedge clk) begin")
+    for suf, re_expr, raddr in read_ports:
+        L.append("    if ((%s) && %s == f_addr) begin" % (re_expr, raddr))
+        L.append("      f_rd%s <= 1'b1; f_exp%s <= f_data; f_ev%s <= f_valid;" % (suf, suf, suf))
+        L.append("    end else f_rd%s <= 1'b0;" % suf)
+    L.append("    if ((%s) && %s == f_addr) begin" % (wr_cond, wr_addr))
+    L.append("      for (fl = 0; fl < %d; fl = fl + 1) begin" % lanes)
+    L.append("        if (wmask[fl]) begin")
+    L.append("          f_data[fl*8 +: 8] <= wdata[fl*8 +: 8];")
+    L.append("          f_valid[fl] <= 1'b1;")
+    L.append("        end")
+    L.append("      end")
+    L.append("    end")
+    L.append("  end")
+    L.append("  always @(posedge clk) begin")
+    L.append("    for (fl = 0; fl < %d; fl = fl + 1) begin" % lanes)
+    for suf, _, _ in read_ports:
+        L.append("      if (f_rd%s && f_ev%s[fl]) "
+                 "assert (rdata%s[fl*8 +: 8] == f_exp%s[fl*8 +: 8]);" % (suf, suf, suf, suf))
+    L.append("    end")
+    L.append("  end")
+    L.append("`endif")
+    return "\n".join(L) + "\n"
+
+
 def _formal_for(cfg):
+    builder = _formal_sram_be if cfg.byte_en else _formal_sram
     if cfg.kind == "sram_1rw":
-        return _formal_sram(cfg, [("", "ce", "addr")], "ce && we", "addr")
+        return builder(cfg, [("", "ce", "addr")], "ce && we", "addr")
     if cfg.kind == "sram_1r1w":
-        return _formal_sram(cfg, [("", "re", "raddr")], "we", "waddr")
+        return builder(cfg, [("", "re", "raddr")], "we", "waddr")
     if cfg.kind == "sram_2r1w":
-        return _formal_sram(cfg, [("0", "re0", "raddr0"), ("1", "re1", "raddr1")],
-                            "we", "waddr")
+        return builder(cfg, [("0", "re0", "raddr0"), ("1", "re1", "raddr1")],
+                       "we", "waddr")
     return ""

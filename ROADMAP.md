@@ -48,18 +48,33 @@ Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
 
 Goal: Khnum's headline differentiator — proofs, not promises.
 
-- [ ] cocotb testbenches (`tests/cocotb/`), SIM=verilator, one suite per kind —
-      mirror KemetCore's proven Makefile pattern
-- [ ] Formal properties embedded in generated RTL under `` `ifdef FORMAL `` (no `bind` —
-      yosys 0.6x has none): rdata matches a golden shadow process, write lanes only
-      change masked bytes, FIFO never overflows/underflows, gray pointers change 1 bit
-      — **partial (PR #5): SRAM read-first scoreboard shipped on all 3 sram kinds
-      (full-word writes); byte-lane masks + FIFO over/underflow + gray-pointer props pending**
+- [x] cocotb testbenches (`tests/cocotb/`), SIM=verilator, one suite per kind (6/6:
+      sram_1rw, sram_1r1w, sram_2r1w, rf_2r1w_ff, fifo_sync, fifo_async) — mirrors
+      KemetCore's Makefile pattern (`make CORE=<kind>`), each DUT generated on the fly
+      to a fixed `dut` module name; every suite drives an independent Python golden
+      model (read-first scoreboard / async-read RF model / shadow deque / strict FIFO
+      order across two free-running clocks) — a THIRD verification method distinct from
+      the Verilog self-checking TB and the formal proofs. **Local env gotcha**: this
+      machine's conda base env pollutes `PYTHONHOME` for cocotb's embedded interpreter,
+      which collides with Verilator's own internal `/usr/bin/python3` call during the
+      C++ build step (`ModuleNotFoundError: No module named 'encodings'`) — fixed by
+      overriding Verilator's `PYTHON3` make var to strip PYTHONHOME just for that one
+      invocation: `make CORE=<kind> PYTHON3='env -u PYTHONHOME /usr/bin/python3.12'`
+- [x] Formal properties embedded in generated RTL under `` `ifdef FORMAL `` (no `bind` —
+      yosys 0.6x has none): rdata matches a golden shadow process (full-word AND
+      per-byte-lane, PR #5 + this PR), FIFO never overflows/underflows (occupancy
+      invariant), gray pointers stay valid gray encodings of their binary counters
+      (=> change exactly 1 bit/step) — **all 9 configs proven: 4 full-word + 3
+      byte-lane SRAM, fifo_sync, fifo_async**
 - [x] `tools/formal.py`: runs yowasp-yosys → `async2sync` → `write_smt2` → yowasp-yosys-smtbmc
       (z3). **Vacuity enforced**: counts `yosys-smt2-assert` in the SMT2; 0 assertions = FAIL.
-      Proves 4 SRAM configs; yosys runs cwd=outdir (WASI sandbox) (PR #5)
-- [x] Mutation testing: `tools/mutate.py` breaks read-first (read→write-through) per kind
-      and `formal.py` REQUIRES the proof to fail; a mutation that survives fails the run (PR #5)
+      Proves 9 configs (7 SRAM incl. 3 byte-lane + fifo_sync + fifo_async); yosys runs
+      cwd=outdir (WASI sandbox); byte-lane configs use a shorter BMC depth (z3 solves
+      per-lane part-selects far slower with unroll depth) (PR #5, extended this PR)
+- [x] Mutation testing: `tools/mutate.py` breaks each kind's own property (SRAM:
+      read-first → write-through; fifo_sync: drop the full-guard; fifo_async: gray encode
+      → identity map) and `formal.py` REQUIRES the proof to fail; a mutation that survives
+      fails the run (PR #5, extended this PR)
 - [x] CI: GitHub Actions `.github/workflows/ci.yml` — ubuntu-latest, apt verilator, pip
       yowasp-yosys + z3-solver, runs `tools/test_all.py` (matrix + formal) on push/PR (PR #5)
 

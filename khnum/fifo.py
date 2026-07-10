@@ -76,6 +76,13 @@ def _emit_fifo_sync(cfg):
       count <= count + {{{cw-1}'d0, do_push}} - {{{cw-1}'d0, do_pop}};
     end
   end
+`ifdef FORMAL
+  // Khnum FIFO safety proof (P2): starting from reset, occupancy never over- or
+  // under-flows. Discharged by yosys+z3 BMC, mutation-checked (drop the overflow
+  // guard and this fails). Invisible to Verilator/synthesis.
+  initial assume (!rst_n);
+  always @(posedge clk) if (rst_n) assert (count <= {cw}'d{d});
+`endif
 endmodule
 """
 
@@ -141,6 +148,17 @@ def _emit_fifo_async(cfg):
       rq2_wgray <= rq1_wgray;
     end
   end
+`ifdef FORMAL
+  // Khnum async-FIFO gray-pointer proof (P2): each domain's gray register is
+  // always the valid gray encoding of its binary counter, which implies it
+  // changes by exactly one bit per step (the property CDC synchronizers rely
+  // on to be metastability-safe). Mutation-checked: encode with an identity
+  // map instead of (n>>1)^n and this fails.
+  initial assume (!wrst_n);
+  initial assume (!rrst_n);
+  always @(posedge wclk) if (wrst_n) assert (wgray == ((wbin >> 1) ^ wbin));
+  always @(posedge rclk) if (rrst_n) assert (rgray == ((rbin >> 1) ^ rbin));
+`endif
 endmodule
 """
 
