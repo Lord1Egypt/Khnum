@@ -23,7 +23,7 @@ RF_MAX_DEPTH = 64  # flop-based register files get expensive fast
 class Config:
     """Validated configuration for one memory instance."""
 
-    def __init__(self, kind, depth, width, byte_en=False, name=None):
+    def __init__(self, kind, depth, width, byte_en=False, name=None, ecc=False):
         if kind not in KINDS:
             raise ValueError("unknown kind %r (choose from %s)" % (kind, ", ".join(KINDS)))
         if depth < 2 or depth > (1 << 24):
@@ -40,16 +40,44 @@ class Config:
         if kind == "fifo_async" and (depth < 4 or depth & (depth - 1)):
             raise ValueError("fifo_async requires power-of-2 depth >= 4 (gray-coded "
                              "pointers), got %d" % depth)
+        if ecc and not kind.startswith("sram_"):
+            raise ValueError("--ecc is supported on sram kinds only, got %s" % kind)
+        if ecc and byte_en:
+            raise ValueError("--ecc and --byte-en are mutually exclusive (masked writes "
+                             "would need read-modify-write under ECC)")
+        if ecc:
+            from .ecc import secded_params
+            secded_params(width)  # validates width range for ECC
         self.kind = kind
         self.depth = depth
         self.width = width
         self.byte_en = byte_en
-        self.name = name or "khnum_%s_%dx%d%s" % (kind, depth, width, "_be" if byte_en else "")
+        self.ecc = ecc
+        self.name = name or "khnum_%s_%dx%d%s%s" % (
+            kind, depth, width, "_be" if byte_en else "", "_ecc" if ecc else "")
         self.aw = max(1, math.ceil(math.log2(depth)))
         self.lanes = width // 8 if byte_en else 1
 
     def manifest(self):
         async_read = self.kind in ("rf_2r1w_ff", "fifo_sync", "fifo_async")
+        if self.ecc:
+            from .ecc import code_width
+            extra = {
+                "ecc": {
+                    "scheme": "hamming-secded",
+                    "data_width": self.width,
+                    "code_width": code_width(self.width),
+                },
+                "children": [self.name + "_core", self.name + "_secded_enc",
+                             self.name + "_secded_dec"],
+            }
+        else:
+            extra = {}
+        base = self._manifest_base(async_read)
+        base.update(extra)
+        return base
+
+    def _manifest_base(self, async_read):
         return {
             "generator": "khnum",
             "kind": self.kind,
