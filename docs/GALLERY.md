@@ -21,12 +21,13 @@ multi-GB scale — see `harden/HARDEN_RESULTS.md`).
 
 ## `khnum_sram_1rw_1024x32` — sky130hd
 
-1024 x 32 single-port SRAM, hardened to standard-cell flip-flop RAM. Routes
-cleanly (0 geometric routing-DRC violations) at 1,572,503 µm², 25%
-utilization, but **timing does not yet close** at the 4.0 ns clock used here
-(WNS -0.39 ns) — a looser clock period is the fix, tracked as a follow-up in
-`harden/HARDEN_RESULTS.md`. Shown here to be transparent about where the
-recipe currently stands, not just the wins.
+1024 x 32 single-port SRAM, hardened to standard-cell flip-flop RAM.
+1,533,880 µm², 25% utilization, timing closes at 6.2 ns (WNS 0.00 ns), 0
+routing DRC violations, 0 antenna violations. Took 5 attempts to find a
+recipe that both routes cleanly and closes timing — see
+`harden/HARDEN_RESULTS.md` for the full iteration history (including a
+surprising non-monotonic interaction between clock period and routing
+congestion).
 
 ### Full routed layout
 
