@@ -16,27 +16,35 @@ decimal GB — an earlier draft of this file mixed the two and slightly
 overstated a couple of entries; fixed once `tools/characterize.py` existed to
 compute them consistently.
 
-| design | platform | GDS | area (µm²) | util | clock period (ns) | WNS (ns) | route DRC | peak route RAM | closes |
-|--------|----------|----:|-----------:|:----:|-------------------:|---------:|:---------:|----------------:|:------:|
-| `khnum_sram_1rw_256x32` | sky130hd | 28 MB | 374,736 | 43% | 4.0 | 0.00 (worst slack +0.05) | 0 viol | 2.11 GB | ✅ |
-| `khnum_sram_1rw_1024x32` | sky130hd | 155 MB | 1,572,503 | 25% | 4.0 | **-0.39** | 0 viol (1 residual antenna) | 8.19 GB | ❌ **not yet** |
+| design | platform | GDS | area (µm²) | util | clock period (ns) | WNS (ns) | route DRC | antenna | peak route RAM | closes |
+|--------|----------|----:|-----------:|:----:|-------------------:|---------:|:---------:|--------:|----------------:|:------:|
+| `khnum_sram_1rw_256x32` | sky130hd | 28 MB | 374,736 | 43% | 4.0 | 0.00 (worst slack +0.05) | 0 viol | 0 | 2.11 GB | ✅ |
+| `khnum_sram_1rw_1024x32` | sky130hd | 154 MB | 1,533,880 | 25% | 6.2 | 0.00 | 0 viol | 0 | 7.80 GB | ✅ |
 
-`khnum_sram_1rw_1024x32` routes cleanly (0 geometric routing-DRC violations,
-still comfortably under the 13 GB RAM cap) but **does not close timing** at the
-same 4.0 ns clock used for the smaller design — WNS -0.39 ns. This is an
-honest, expected result, not a bug: 4x the flops means 4x the clock-tree
-insertion delay and mux/decode fan-in, so the same period is simply too
-aggressive at this size. **Not being reported as a closed size** — per this
-file's own convention (WNS ≥ 0 ⇒ closes), and ROADMAP.md's "partial is not
-done" rule. Fix for next session: loosen `clk_period` in this design's
-`constraint.sdc` (e.g. to 6.0-8.0 ns) and re-run; the routed geometry itself is
-sound, so this should just need the timing target relaxed, not a placement/
-routing retune. One residual antenna violation also remains after the
-repair loop's diode-insertion rounds converged to 1 rather than 0 (down from
-95 initially) — worth re-checking once the clock period is fixed, but is a
-separate, lower-priority item (antenna violations are a reliability/yield
-concern, not a functional-correctness one, and diode insertion is best-effort
-in ORFS, not guaranteed to reach exactly 0).
+`khnum_sram_1rw_1024x32` took **5 attempts** to close, all real signal, no
+dead ends papered over:
+1. `CORE_UTILIZATION=35`/`PLACE_DENSITY=0.55` (256x32's recipe) at 4.0 ns —
+   failed global routing outright (`GRT-0232`, met5 ~90% congested).
+2. `CORE_UTILIZATION=20`/`PLACE_DENSITY=0.45` at 4.0 ns — routed cleanly, but
+   WNS -0.39 ns (too aggressive a clock for 4x the flops).
+3. Same utilization/density at 6.0 ns — WNS -0.03 ns, essentially the
+   threshold, routed clean (0 DRC, 1 residual antenna).
+4. Same utilization/density at 6.5 ns — **failed global routing again**
+   (`GRT-0232`, met5 ~51%). This was the surprising one: clock period has a
+   *non-monotonic* effect on congestion here, because a looser timing budget
+   changes how hard the resizer buffers/upsizes cells, which changes local
+   cell density in ways that don't simply track the period. A "just add more
+   margin" instinct is not safe with this knob.
+5. Same utilization/density at 6.2 ns (a smaller step from the known-good 6.0)
+   — **routed clean AND closed timing**: WNS 0.00, 0 routing-DRC violations,
+   0 antenna violations, 7.80 GiB peak route RAM.
+
+Lesson for the next size (2Kx64) and beyond: when a clock-period bump fails on
+*routing congestion* rather than timing, don't keep pushing the period up —
+step back down and take a smaller increment, or address congestion directly
+via utilization/density instead. The two knobs (timing budget, placement
+density) interact and neither is a strictly safe direction to push
+independently.
 
 ## How this was produced
 
@@ -73,15 +81,24 @@ design size.
   ("if detail route OOMs, reduce CORE_UTILIZATION / increase die area") applies
   to routing-congestion failures too, not just OOM.
 - **Timing does not automatically carry over between sizes**: a clock period
-  that closes at one size is not guaranteed to close at 4x the flops — see the
-  `khnum_sram_1rw_1024x32` WNS -0.39 ns result above. Each new size's
-  `constraint.sdc` needs its own timing budget, sized for its own datapath.
+  that closes at one size is not guaranteed to close at 4x the flops. Each new
+  size's `constraint.sdc` needs its own timing budget, sized for its own
+  datapath.
+- **Clock period vs. routing congestion is non-monotonic**: `khnum_sram_1rw_1024x32`
+  routed cleanly at 6.0 ns, then FAILED global routing at 6.5 ns (a looser
+  clock, which should intuitively be "easier"), then routed and closed cleanly
+  at 6.2 ns. A looser timing budget changes the resizer's buffering/upsizing
+  decisions, which changes local placement density in ways that don't track
+  linearly with the period. Take small steps when hunting for a closing clock
+  period, and if a step fails on congestion (not timing), don't assume a
+  bigger step will fix it — it may make congestion worse, not better.
 
 ## Next sizes
 
-Per ROADMAP.md P4: 2Kx64 remains. `khnum_sram_1rw_1024x32` needs a follow-up
-run with a looser clock period (see above) before it can be marked closed.
-Watch `SYNTH_MEMORY_MAX_BITS`, routing congestion (retune utilization/density
-if `GRT-0232` appears), and peak route RAM per size — recipes that exceed
-~13 GB peak need retuning before going bigger, per the 16 GB laptop
-constraint (1024x32 at 8.19 GB shows there's still headroom before 2Kx64).
+Per ROADMAP.md P4: 2Kx64 remains. Watch `SYNTH_MEMORY_MAX_BITS`, routing
+congestion (retune utilization/density if `GRT-0232` appears, and prefer
+small clock-period steps per the lesson above), and peak route RAM per size —
+recipes that exceed ~13 GB peak need retuning before going bigger, per the
+16 GB laptop constraint (1024x32 at 7.80 GiB shows there's still headroom
+before 2Kx64, though 2Kx64's starting recipe already uses a lower
+utilization/looser clock than 1024x32's as a precaution).

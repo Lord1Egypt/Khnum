@@ -103,17 +103,17 @@ peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules
       (gitignored — regenerable, multi-GB scale, same as KemetCore's `flow/`)
 - [ ] `harden/` directory: ORFS config per showcase size (e.g. 256×32, 1K×32, 2K×64)
       for **sky130hd** using the local Docker openroad/orfs image (same as KemetCore
-      `flow/harden.sh` pattern). **1/3 fully closed, 1/3 routed-but-not-timing-clean**:
-      `khnum_sram_1rw_256x32` hardened, timing closed, 0 DRC — see
-      `harden/HARDEN_RESULTS.md`. `khnum_sram_1rw_1024x32` routes cleanly (0 DRC,
-      8.19 GB peak, needed `CORE_UTILIZATION` retuned 35→20 to fix a routing-
-      congestion failure) but does **not** close timing at 4.0 ns (WNS -0.39 ns) —
-      needs a looser clock period next session before it counts as closed. 2K×64
-      still open (watch `SYNTH_MEMORY_MAX_BITS` — must exceed each design's bit
-      count).
+      `flow/harden.sh` pattern). **2/3 fully closed**: `khnum_sram_1rw_256x32`
+      (timing closed, 0 DRC) and `khnum_sram_1rw_1024x32` (timing closed at
+      6.2 ns after 5 tuning attempts, 0 DRC, 0 antenna violations) — see
+      `harden/HARDEN_RESULTS.md` for the full iteration history, including a
+      non-monotonic clock-period-vs-congestion interaction worth knowing before
+      tuning the next size. 2K×64 still open (config prepped in
+      `harden/designs/sky130hd/khnum_sram_1rw_2048x64/`, not yet run; watch
+      `SYNTH_MEMORY_MAX_BITS` — must exceed each design's bit count).
 - [x] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
       utilization, routing effort) — the 16 GB promise is a release gate.
-      `khnum_sram_1rw_256x32`: 2.11 GB peak. `khnum_sram_1rw_1024x32`: 8.19 GB
+      `khnum_sram_1rw_256x32`: 2.11 GiB peak. `khnum_sram_1rw_1024x32`: 7.80 GiB
       peak. Both comfortably clear of the 13-14 GB ceiling.
 - [x] GDS gallery in `docs/GALLERY.md` (screenshots via ORFS's own auto-generated
       KLayout renders, `harden/reports/.../final_*.webp` — no separate klayout

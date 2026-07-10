@@ -2,8 +2,10 @@
 
 ## ▶▶ RESUME HERE (updated 2026-07-10, session 7)
 
-- **Phase:** P4 The Foundry (ASIC hardening) — **1/3 sizes done, in progress**. P3 =
-  ✅ 3/3 (this session, PR #7). P2 = ✅ 5/5 (PR #6). P1 = ✅ 7/7 (PRs #2–#4).
+- **Phase:** P4 The Foundry (ASIC hardening) — **2/3 sizes timing-closed, 1/3 open**.
+  P5 The Scribe — **3/4 done** (characterization ✅, demo GIF ✅, integration docs ✅;
+  gh-pages content pushed, activation deliberately deferred). P3 = ✅ 3/3 (PR #7).
+  P2 = ✅ 5/5 (PR #6). P1 = ✅ 7/7 (PRs #2–#4).
 - **P3 result: no RTL bug.** `tools/test_fpga.py` runs `synth_xilinx`/`synth_ice40` on
   all 3 SRAM kinds x byte-en on/off at depth 256 and requires real BRAM cells
   (`RAMB18E1`, `SB_RAM40_4K`) in the `stat` tally — **12/12 PASS first try**, zero
@@ -28,27 +30,47 @@
   `config.mk` (P4's whole point IS flip-flop hardening of the array, so this is
   the correct fix, not a workaround); (2) `LEC_CHECK=0` needed — this CPU lacks
   AVX-512, same as KemetCore's documented fix.
-- **P4 progress (cont., same session): `khnum_sram_1rw_1024x32` attempted.**
-  First try at the same `CORE_UTILIZATION=35`/`PLACE_DENSITY=0.55` recipe FAILED
-  global routing outright (`GRT-0232` congestion, met5 ~90%) — retuned to
-  `CORE_UTILIZATION=20`/`PLACE_DENSITY=0.45`, which routed cleanly (0 geometric
-  DRC violations, 8.19 GB peak route RAM, still well under the 13 GB cap). BUT
-  **timing does NOT close at 4.0 ns** (WNS -0.39 ns) — 4x the flops means more
-  clock-tree/decode delay than the 256x32 clock budget allows. **Not counted as
-  a closed size** (honest-scoreboard rule: WNS must be ≥ 0). Also 1 residual
-  antenna violation remains after diode-repair converged 95→...→1 rather than
-  0 (lower priority, separate from routing DRC). Full writeup + numbers:
-  `harden/HARDEN_RESULTS.md`; screenshots: `docs/GALLERY.md`.
-- **Next task: finish P4** — (1) re-run `khnum_sram_1rw_1024x32` with a looser
-  `clk_period` in its `constraint.sdc` (try 6.0-8.0 ns) to close timing — the
-  routed geometry is already sound, this should just need the timing target
-  relaxed; (2) then harden 2K×64 (add to the `case` in `tools/harden.sh` + a
-  `harden/designs/sky130hd/<design>/` config; watch `SYNTH_MEMORY_MAX_BITS` and
-  routing congestion — may need `CORE_UTILIZATION` retuned again, same as
-  1024x32 did). Then Liberty/LEF stubs, then P5 docs+VHS demo GIF, P6 PyPI
-  `khnum-ram`. All per CLAUDE.md. **Note**: each harden run at this scale takes
-  30 min to 2+ hours real time (1024x32's antenna-repair loop alone ran ~2h) —
-  budget a full session for the remaining sizes, don't expect quick turnaround.
+- **P4 `khnum_sram_1rw_1024x32` — CLOSED after 5 tuning attempts (all same
+  session):** (1) 256x32's recipe (`CORE_UTILIZATION=35`/`PLACE_DENSITY=0.55`)
+  at 4.0 ns clock — failed global routing outright (`GRT-0232`, met5 ~90%
+  congested). (2) `CORE_UTILIZATION=20`/`PLACE_DENSITY=0.45` at 4.0 ns — routed
+  clean, but WNS -0.39 ns. (3) same utilization/density at 6.0 ns — WNS
+  -0.03 ns, essentially the threshold. (4) same at 6.5 ns — **failed global
+  routing again** (`GRT-0232`, met5 ~51%) — the surprising one: clock period
+  has a *non-monotonic* effect on routing congestion (a looser timing budget
+  changes resizer buffering/upsizing decisions, which changes placement
+  density in ways that don't track the period linearly). (5) same at 6.2 ns (a
+  smaller step from the known-good 6.0, not another big jump) — **routed clean
+  AND closed timing**: WNS 0.00, 0 routing-DRC violations, 0 antenna
+  violations, 7.80 GiB peak route RAM. Full iteration history + the
+  non-monotonic-congestion lesson: `harden/HARDEN_RESULTS.md`. New screenshots
+  in `docs/GALLERY.md` (overwrote the earlier not-closed ones).
+- **P4 remaining: 2K×64** — config already prepped and merged
+  (`harden/designs/sky130hd/khnum_sram_1rw_2048x64/`, case entry in
+  `tools/harden.sh`), starting from a looser recipe than 1024x32's own tuned
+  values on both axes (`CORE_UTILIZATION=15`/`PLACE_DENSITY=0.40`, 8.0 ns
+  clock) since the previous 4x jump needed loosening both ways. **Not yet
+  run.** Given the non-monotonic clock-vs-congestion lesson above: if a step
+  fails on congestion, don't just push the period looser — step back and take
+  a smaller increment, or address congestion via utilization/density directly.
+- **P5 remaining: gh-pages activation** — content is pushed to the `gh-pages`
+  branch (a themed single-page HTML site, no external deps) but actually
+  **enabling GitHub Pages was deliberately NOT done** — the safety classifier
+  correctly flagged it as a public-publish action the user hadn't explicitly
+  named, and the same applies to any future attempt: get explicit go-ahead
+  first, or the user can just flip it on themselves (repo Settings → Pages →
+  source: `gh-pages` branch, root).
+- **P6 not started**: PyPI publish and GitHub Release are also public,
+  effectively-irreversible-per-version actions — same deliberate deferral
+  policy. Don't attempt `twine upload`/`gh release create` without explicit
+  user go-ahead even if "keep going" was said broadly; ask specifically for
+  this step. Building/checking the package locally (no upload) is fine without
+  asking.
+- **Next task**: harden 2K×64 (`bash tools/harden.sh khnum_sram_1rw_2048x64`,
+  expect 30 min–2+ hours real time per attempt, likely multiple tuning
+  attempts per the lessons above). Then P4's stretch items (ASAP7, Liberty/LEF
+  stubs) or move to finishing P5 (ask about gh-pages activation) and P6 (ask
+  before any actual publish). All per CLAUDE.md.
 - **KEY formal facts learned (PR #5+#6):** yowasp-yosys runs in a **WASI sandbox — only
   sees its cwd**, so `formal.py`/tools must invoke it with `cwd=outdir` and bare filenames
   (absolute paths → "file not found"). `async2sync` before `write_smt2` is mandatory (else
@@ -74,23 +96,53 @@
   standalone now proves **9 configs** (was 4). All 6 `tests/cocotb/` suites pass
   standalone via `make CORE=<kind> PYTHON3='env -u PYTHONHOME /usr/bin/python3'`
   (not yet wired into `test_all.py`/CI — see ROADMAP.md note on why).
-- **Branch state:** `feat/p4-foundry-1024x32`, this session — see PR for merge state.
+- **Branch state:** `feat/p4-1024x32-timing-closed`, this session — see PR for merge state.
 
 ## Honest scoreboard
 
 | Phase | State |
 |---|---|
-| P0 Genesis | ✅ 9/9 boxes, test-proven |
+| P0 Genesis | ✅ 8/8 boxes, test-proven |
 | P1 Potter's Wheel | ✅ 7/7, test-proven |
 | P2 The Proof | ✅ 5/5, test-proven |
 | P3 FPGA Gate | ✅ 3/3, test-proven |
-| P4 The Foundry | 🔧 3/6, in progress (1/3 sizes timing-closed, 1/3 routed-but-not-closed, 1/3 open) |
-| P5 The Scribe | ⬜ 0/4 |
-| P6 Ascension | ⬜ 0/5 |
+| P4 The Foundry | 🔧 3/6, in progress (2/3 sizes timing-closed, 1/3 open) |
+| P5 The Scribe | 🔧 3/4 (gh-pages content pushed, activation pending user go-ahead) |
+| P6 Ascension | ⬜ 0/5 (PyPI/GitHub Release need explicit user go-ahead before publishing) |
 
-**Total: 27/39 (69%) — "partial" ≠ "done".**
+**Total: 29/38 (76%) — "partial" ≠ "done".** (Corrected from a stale 39-box
+count carried over several sessions — P0 is actually 8 boxes, not 9; direct
+recount via `grep -c` is the source of truth from here on.)
 
 ## Session log
+
+- **2026-07-10 (session 7, cont. x3)** — P4 second size CLOSED:
+  `khnum_sram_1rw_1024x32` timing closes at 6.2 ns clock (WNS 0.00 ns, 0
+  routing-DRC violations, 0 antenna violations, 1,533,880 µm² @ 25% utilization,
+  7.80 GiB peak route RAM). Took 5 total tuning attempts across this session
+  (see the P4 entry above and `harden/HARDEN_RESULTS.md` for the full
+  iteration history). Key new lesson: clock period has a *non-monotonic*
+  effect on routing congestion — a 6.5 ns attempt (looser than the
+  known-working 6.0 ns) failed global routing on congestion, while the
+  smaller 6.2 ns step succeeded. Also shipped this session: `docs/demo.tape`+
+  `docs/demo.gif` (VHS terminal demo, house rule), `docs/INTEGRATION.md`,
+  `tools/characterize.py` (auto-generates `docs/CHARACTERIZATION.md` from
+  harden output — caught and fixed two real accuracy bugs along the way: a
+  decimal-GB/binary-GiB unit mixup in hand-written RAM figures, and a
+  route-DRC/antenna-violation conflation in the tool's own regex), a README
+  accuracy pass, and the `gh-pages` branch content (a themed single-page
+  site) pushed but **not activated** — Pages activation and any future PyPI/
+  GitHub-Release publish are deliberately deferred pending explicit user
+  go-ahead (both flagged by the safety classifier as public-publish actions
+  outside the literal scope of "keep going until finish"). 2K×64's recipe is
+  prepped and merged but not yet run. Total tracker corrected from a
+  long-stale "39 boxes" to the actual 38 (direct recount): 29/38 (76%).
+  Also caught and immediately fixed a real mistake this session: a shell
+  cwd drift left over from exploring KemetCore's gh-pages branch caused one
+  `git checkout -b` to land in the wrong repo — caught before any commit,
+  KemetCore fully restored (branch deleted, back on its own main, nothing
+  lost). Lesson: always verify `pwd`/`git branch --show-current` before
+  committing when multiple repos are in play in the same session.
 
 - **2026-07-10 (session 7, cont. x2)** — P4 second size attempted:
   `khnum_sram_1rw_1024x32`. First attempt (same recipe as 256x32) failed global

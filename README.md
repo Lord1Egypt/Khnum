@@ -141,8 +141,8 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan with checklists, and
   byte-lane, FIFO occupancy, gray-pointer) all non-vacuous and mutation-tested
 - **P3 The FPGA Gate** ✅ — automated BRAM/SPRAM-inference verification (yosys
   `synth_xilinx`/`synth_ice40`), 12/12 configs proven
-- **P4 The Foundry** 🔧 — OpenROAD/ORFS hardening (Sky130), 16 GB-safe; one size
-  timing-closed, one routed-but-retuning, one still open — see
+- **P4 The Foundry** 🔧 — OpenROAD/ORFS hardening (Sky130), 16 GB-safe; two sizes
+  timing-closed, one still open — see
   [harden/HARDEN_RESULTS.md](harden/HARDEN_RESULTS.md)
 - **P5 The Scribe** 🔧 — characterization tables ✅, terminal demo GIF ✅, integration
   docs ✅; gh-pages content pushed, activation pending
