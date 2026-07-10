@@ -32,9 +32,10 @@ Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
       boundaries, ignored ops, simultaneous push/pop) (PR #2)
 - [x] `fifo_async`: dual-clock FIFO — gray-coded pointers (Cummings), 2-FF synchronizers;
       TB with coprime #7/#11 clocks, 2000-word order check, watchdog (PR #2)
-- [ ] `ecc_secded`: Hamming SECDED encode/decode modules + `--ecc` wrapper option on
-      sram kinds (data widths 8/16/32/64; single-error corrected, double-error detected;
-      TB injects 1-bit and 2-bit faults and checks correction/detection flags)
+- [x] `ecc_secded`: Hamming SECDED encode/decode modules + `--ecc` wrapper option on
+      sram kinds (data widths 4–1024, incl. 8/32/64; single-error corrected, double-error
+      detected; standalone TB injects **all** 1-bit and **all** 2-bit faults ×25 trials
+      and checks correction/detection flags) (PR #3)
 - [ ] Banking composer: `--bank-depth N` / `--bank-width N` emit a wrapper that tiles
       base macros (address-decode deep tiling, lane-concat wide tiling); manifest lists
       the hierarchy
