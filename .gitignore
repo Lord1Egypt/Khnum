@@ -4,8 +4,11 @@ build/
 obj_dir/
 dist/
 *.egg-info/
-harden/results/**/objects/
-harden/results/**/logs/
+harden/rtl/
+harden/logs/
+harden/objects/
+harden/reports/
+harden/results/
 tests/cocotb/gen/
 tests/cocotb/sim_build_*/
 tests/cocotb/results.xml

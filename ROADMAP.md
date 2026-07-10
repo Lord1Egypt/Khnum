@@ -98,14 +98,20 @@ Goal: prove the "one config → FPGA and ASIC" claim mechanically.
 Goal: DFFRAM-style standard-cell hardening through OpenROAD/ORFS with recipes that
 peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules).
 
+- [x] `tools/harden.sh`: wraps Docker with `--memory=13g --memory-swap=24g`
+      (Docker-swap OOM lesson) and produces GDS + DEF + reports into `harden/results/`
+      (gitignored — regenerable, multi-GB scale, same as KemetCore's `flow/`)
 - [ ] `harden/` directory: ORFS config per showcase size (e.g. 256×32, 1K×32, 2K×64)
       for **sky130hd** using the local Docker openroad/orfs image (same as KemetCore
-      `flow/harden.sh` pattern)
-- [ ] `tools/harden.sh`: wraps Docker with `--memory=13g --memory-swap=24g`
-      (Docker-swap OOM lesson) and produces GDS + DEF + reports into `harden/results/`
-- [ ] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
-      utilization, routing effort) — the 16 GB promise is a release gate
-- [ ] GDS gallery in `docs/GALLERY.md` (screenshots via ORFS klayout export)
+      `flow/harden.sh` pattern). **1/3 done**: `khnum_sram_1rw_256x32` hardened,
+      timing closed, 0 DRC — see `harden/HARDEN_RESULTS.md`. 1K×32 and 2K×64 still
+      open (watch `SYNTH_MEMORY_MAX_BITS` — must exceed each design's bit count).
+- [x] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
+      utilization, routing effort) — the 16 GB promise is a release gate.
+      `khnum_sram_1rw_256x32`: 2.17 GB peak (detail routing) — comfortably clear.
+- [x] GDS gallery in `docs/GALLERY.md` (screenshots via ORFS's own auto-generated
+      KLayout renders, `harden/reports/.../final_*.webp` — no separate klayout
+      invocation needed). 1 design so far; grows with each new size.
 - [ ] Stretch: ASAP7 variants (KemetCore flow already proves local ASAP7 works)
 - [ ] Liberty/LEF abstract stubs emitted alongside GDS for SoC integration
 
