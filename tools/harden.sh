@@ -25,6 +25,8 @@ MEM_ARGS="${DOCKER_MEM_ARGS:---memory=13g --memory-swap=24g}"
 case "$DESIGN" in
   khnum_sram_1rw_256x32)
     GEN_ARGS="--kind sram_1rw --depth 256 --width 32" ;;
+  khnum_sram_1rw_1024x32)
+    GEN_ARGS="--kind sram_1rw --depth 1024 --width 32" ;;
   *)
     echo "tools/harden.sh: unknown design '${DESIGN}' (add its khnum gen flags" \
          "to the case statement above)" >&2

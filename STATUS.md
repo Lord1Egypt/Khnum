@@ -28,10 +28,27 @@
   `config.mk` (P4's whole point IS flip-flop hardening of the array, so this is
   the correct fix, not a workaround); (2) `LEC_CHECK=0` needed — this CPU lacks
   AVX-512, same as KemetCore's documented fix.
-- **Next task: P4 remaining sizes** — harden 1K×32 and 2K×64 next (add each to the
-  `case` in `tools/harden.sh` + a `harden/designs/sky130hd/<design>/` config; watch
-  `SYNTH_MEMORY_MAX_BITS` per size). Then Liberty/LEF stubs, then P5 docs+VHS demo
-  GIF, P6 PyPI `khnum-ram`. All per CLAUDE.md.
+- **P4 progress (cont., same session): `khnum_sram_1rw_1024x32` attempted.**
+  First try at the same `CORE_UTILIZATION=35`/`PLACE_DENSITY=0.55` recipe FAILED
+  global routing outright (`GRT-0232` congestion, met5 ~90%) — retuned to
+  `CORE_UTILIZATION=20`/`PLACE_DENSITY=0.45`, which routed cleanly (0 geometric
+  DRC violations, 8.19 GB peak route RAM, still well under the 13 GB cap). BUT
+  **timing does NOT close at 4.0 ns** (WNS -0.39 ns) — 4x the flops means more
+  clock-tree/decode delay than the 256x32 clock budget allows. **Not counted as
+  a closed size** (honest-scoreboard rule: WNS must be ≥ 0). Also 1 residual
+  antenna violation remains after diode-repair converged 95→...→1 rather than
+  0 (lower priority, separate from routing DRC). Full writeup + numbers:
+  `harden/HARDEN_RESULTS.md`; screenshots: `docs/GALLERY.md`.
+- **Next task: finish P4** — (1) re-run `khnum_sram_1rw_1024x32` with a looser
+  `clk_period` in its `constraint.sdc` (try 6.0-8.0 ns) to close timing — the
+  routed geometry is already sound, this should just need the timing target
+  relaxed; (2) then harden 2K×64 (add to the `case` in `tools/harden.sh` + a
+  `harden/designs/sky130hd/<design>/` config; watch `SYNTH_MEMORY_MAX_BITS` and
+  routing congestion — may need `CORE_UTILIZATION` retuned again, same as
+  1024x32 did). Then Liberty/LEF stubs, then P5 docs+VHS demo GIF, P6 PyPI
+  `khnum-ram`. All per CLAUDE.md. **Note**: each harden run at this scale takes
+  30 min to 2+ hours real time (1024x32's antenna-repair loop alone ran ~2h) —
+  budget a full session for the remaining sizes, don't expect quick turnaround.
 - **KEY formal facts learned (PR #5+#6):** yowasp-yosys runs in a **WASI sandbox — only
   sees its cwd**, so `formal.py`/tools must invoke it with `cwd=outdir` and bare filenames
   (absolute paths → "file not found"). `async2sync` before `write_smt2` is mandatory (else
@@ -57,7 +74,7 @@
   standalone now proves **9 configs** (was 4). All 6 `tests/cocotb/` suites pass
   standalone via `make CORE=<kind> PYTHON3='env -u PYTHONHOME /usr/bin/python3'`
   (not yet wired into `test_all.py`/CI — see ROADMAP.md note on why).
-- **Branch state:** `feat/p4-foundry-256x32`, this session — see PR for merge state.
+- **Branch state:** `feat/p4-foundry-1024x32`, this session — see PR for merge state.
 
 ## Honest scoreboard
 
@@ -67,13 +84,28 @@
 | P1 Potter's Wheel | ✅ 7/7, test-proven |
 | P2 The Proof | ✅ 5/5, test-proven |
 | P3 FPGA Gate | ✅ 3/3, test-proven |
-| P4 The Foundry | 🔧 3/6, in progress (1/3 sizes hardened) |
+| P4 The Foundry | 🔧 3/6, in progress (1/3 sizes timing-closed, 1/3 routed-but-not-closed, 1/3 open) |
 | P5 The Scribe | ⬜ 0/4 |
 | P6 Ascension | ⬜ 0/5 |
 
 **Total: 27/39 (69%) — "partial" ≠ "done".**
 
 ## Session log
+
+- **2026-07-10 (session 7, cont. x2)** — P4 second size attempted:
+  `khnum_sram_1rw_1024x32`. First attempt (same recipe as 256x32) failed global
+  routing outright on congestion (`GRT-0232`, met5 layer ~90% used) — retuned
+  `CORE_UTILIZATION` 35→20 and `PLACE_DENSITY` 0.55→0.45, which then routed
+  cleanly (0 geometric routing-DRC violations, 1,572,503 µm² @ 25% utilization,
+  8.19 GB peak route RAM — well under the 13 GB cap; took ~2h real time end to
+  end, including ~7 antenna-repair diode-insertion iterations that converged
+  95→1 residual violation rather than fully to 0). **Timing does NOT close**
+  at the same 4.0 ns clock as the 256x32 design (WNS -0.39 ns) — 4x the flops
+  needs more slack than that budget allows. Recorded honestly as "routed, not
+  timing-closed" rather than claimed as a second closed size (scoreboard rule:
+  WNS must be ≥ 0). Screenshots + full numbers in `harden/HARDEN_RESULTS.md` /
+  `docs/GALLERY.md`. Next-session follow-up: loosen `clk_period` in this
+  design's `constraint.sdc` and re-run before starting 2K×64.
 
 - **2026-07-10 (session 7, cont.)** — P4 first size shipped:
   `khnum_sram_1rw_256x32` hardened to sky130hd through `tools/harden.sh`
