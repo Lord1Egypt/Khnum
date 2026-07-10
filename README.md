@@ -7,8 +7,8 @@
 One command gives you verified, synthesizable RTL for SRAMs, register files, FIFOs,
 ECC-protected memories and banked/tiled composites — each instance shipped **with its own
 self-checking testbench, manifest, embedded formal proof (yosys+z3, vacuity-checked,
-mutation-tested), and (roadmap) OpenROAD hardening recipe** — and the whole flow is
-engineered to fit in **16 GB of RAM**.
+mutation-tested), proven FPGA BRAM inference, and (in progress) an OpenROAD ASIC
+hardening recipe** — and the whole flow is engineered to fit in **16 GB of RAM**.
 
 <p align="center"><img src="docs/demo.gif" alt="Khnum terminal demo" width="700"/></p>
 
@@ -39,7 +39,7 @@ a niche neither covers:
 | Formal proof per instance | ✅ embedded in every SRAM/FIFO instance, discharged via yosys-smtbmc + z3, vacuity-checked, mutation-tested | — | — |
 | ECC (SECDED) option | ✅ `--ecc` on any SRAM (single-correct, double-detect) | — | — |
 | FPGA + ASIC from one config | ✅ portable RTL (BRAM-inference verified in P3) | ASIC only | ASIC only |
-| PDK strategy | portable RTL + OpenROAD/ORFS hardening recipes (Sky130, ASAP7) — P4 | Sky130 / SCMOS / FreePDK45 | Sky130 |
+| PDK strategy | portable RTL + OpenROAD/ORFS hardening recipes (Sky130 proven, ASAP7 stretch) — P4 in progress | Sky130 / SCMOS / FreePDK45 | Sky130 |
 | Runs comfortably on a 16 GB laptop | ✅ **hard design constraint** | heavy | moderate |
 
 Khnum's bet: **most designs don't need a hand-crafted 6T bitcell macro** — they need
@@ -139,9 +139,13 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan with checklists, and
 - **P1 The Potter's Wheel** ✅ — flop register file, sync/async FIFOs (gray-coded CDC), ECC SECDED, banked/tiled composites
 - **P2 The Proof** ✅ — cocotb suites (one per kind), formal properties (read-first,
   byte-lane, FIFO occupancy, gray-pointer) all non-vacuous and mutation-tested
-- **P3 The FPGA Gate** — automated BRAM-inference verification (yosys synth_xilinx / synth_ice40)
-- **P4 The Foundry** — OpenROAD/ORFS hardening recipes (Sky130 → ASAP7), 16 GB-safe, GDS gallery
-- **P5 The Scribe** — characterization tables, docs site, terminal demo GIF
+- **P3 The FPGA Gate** ✅ — automated BRAM/SPRAM-inference verification (yosys
+  `synth_xilinx`/`synth_ice40`), 12/12 configs proven
+- **P4 The Foundry** 🔧 — OpenROAD/ORFS hardening (Sky130), 16 GB-safe; one size
+  timing-closed, one routed-but-retuning, one still open — see
+  [harden/HARDEN_RESULTS.md](harden/HARDEN_RESULTS.md)
+- **P5 The Scribe** 🔧 — characterization tables ✅, terminal demo GIF ✅, integration
+  docs ✅; gh-pages content pushed, activation pending
 - **P6 Ascension** — v1.0.0: PyPI release, GitHub release, stability guarantees
 
 ## Project lineage
