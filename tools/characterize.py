@@ -6,7 +6,10 @@ Reads the same ORFS log/report fields tools/harden.sh's runs produce (all
 world-readable even though ORFS writes them as root inside the container):
   - area/utilization: harden/logs/<platform>/<design>/base/6_report.log
   - WNS/worst slack:  harden/reports/<platform>/<design>/base/6_finish.rpt
-  - route DRC count:  harden/logs/<platform>/<design>/base/5_2_route.log
+  - route DRC count:  harden/logs/<platform>/<design>/base/5_2_route.log (the
+    LAST "Number of violations = N" from DRT-0199 -- the router's own final
+    geometric-DRC tally, separate from antenna violations, which get their
+    own column since they're a different, lower-priority check)
   - peak route RAM:   harden/logs/<platform>/<design>/base/5_2_route.log
 
 A design only appears once harden/results/.../base/6_final.gds exists (i.e.
@@ -50,7 +53,10 @@ def characterize(platform, design):
     wns = m.group(1) if m else "?"
 
     route_log = _read(os.path.join(base_logs, "5_2_route.log"))
-    drc_clean = len(re.findall(r"Found 0 .* violations", route_log))
+    drc_counts = re.findall(r"Number of violations = (\d+)", route_log)
+    route_drc = int(drc_counts[-1]) if drc_counts else None
+    antenna_counts = re.findall(r"Found (\d+) net violations", route_log)
+    antenna = int(antenna_counts[-1]) if antenna_counts else 0
     peaks = re.findall(r"Peak memory:\s*(\d+)KB", route_log)
     peak_gb = "%.2f" % (int(peaks[-1]) / 1024 / 1024) if peaks else "?"
 
@@ -59,8 +65,8 @@ def characterize(platform, design):
 
     return {
         "design": design, "platform": platform, "gds_mb": gds_mb,
-        "area": area, "util": util, "wns": wns, "drc_clean": drc_clean,
-        "peak_gb": peak_gb, "closes": closes,
+        "area": area, "util": util, "wns": wns, "route_drc": route_drc,
+        "antenna": antenna, "peak_gb": peak_gb, "closes": closes,
     }
 
 
@@ -80,19 +86,20 @@ def main():
         "Do not hand-edit — regenerate with `python3 tools/characterize.py`. "
         "Full context and gotchas: `harden/HARDEN_RESULTS.md`.",
         "",
-        "| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | peak route RAM | closes |",
-        "|--------|----------|---------:|-----------:|:----:|---------:|:---------:|----------------:|:------:|",
+        "| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | antenna | peak route RAM | closes |",
+        "|--------|----------|---------:|-----------:|:----:|---------:|:---------:|--------:|----------------:|:------:|",
     ]
     for r in rows:
-        drc = "0 viol" if r["drc_clean"] else "?"
+        drc = "%d viol" % r["route_drc"] if r["route_drc"] is not None else "?"
+        antenna = "%d" % r["antenna"] if r["antenna"] else "0"
         status = "✅" if r["closes"] else "❌ not yet"
         lines.append(
-            "| `%s` | %s | %s | %s | %s%% | %s | %s | %s GB | %s |"
+            "| `%s` | %s | %s | %s | %s%% | %s | %s | %s | %s GB | %s |"
             % (r["design"], r["platform"], r["gds_mb"], r["area"], r["util"],
-               r["wns"], drc, r["peak_gb"], status)
+               r["wns"], drc, antenna, r["peak_gb"], status)
         )
     if not rows:
-        lines.append("| _(no hardened designs found yet)_ | | | | | | | | |")
+        lines.append("| _(no hardened designs found yet)_ | | | | | | | | | |")
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as fh:
