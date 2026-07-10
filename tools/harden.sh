@@ -27,6 +27,8 @@ case "$DESIGN" in
     GEN_ARGS="--kind sram_1rw --depth 256 --width 32" ;;
   khnum_sram_1rw_1024x32)
     GEN_ARGS="--kind sram_1rw --depth 1024 --width 32" ;;
+  khnum_sram_1rw_2048x64)
+    GEN_ARGS="--kind sram_1rw --depth 2048 --width 64" ;;
   *)
     echo "tools/harden.sh: unknown design '${DESIGN}' (add its khnum gen flags" \
          "to the case statement above)" >&2
