@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Khnum — the ram-headed god of memory 𓃝</title>
+<meta name="description" content="Khnum: a zero-dependency, laptop-class, open-source memory compiler. Verified SRAM, register-file, FIFO, ECC and banked memories — with self-checking testbenches, formal proofs, and proven FPGA/ASIC paths.">
+<style>
+  :root{
+    --bg:#0c0f1a; --bg2:#101526; --ink:#e9e4d6; --muted:#98a3bd;
+    --ram:#d99a4e; --ram2:#f0bd78; --nile:#3f7ea6; --nile2:#63a7cc;
+    --clay:#b8603f; --green:#4caf7d; --line:rgba(217,154,78,.18);
+    --card:rgba(255,255,255,.03);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 600px at 80% -10%,rgba(63,126,166,.20),transparent 60%),
+      radial-gradient(900px 500px at 0% 10%,rgba(184,96,63,.14),transparent 55%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    line-height:1.65;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  a{color:var(--ram2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1,h2,h3,.mono{font-family:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace}
+  .glyph{font-family:serif}
+
+  header{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .glyphrow{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:30vw;color:rgba(217,154,78,.04);letter-spacing:.1em;pointer-events:none;user-select:none}
+  .hero{position:relative;padding:96px 0 70px;text-align:center}
+  .eyebrow{letter-spacing:.42em;font-size:.74rem;color:var(--ram);text-transform:uppercase}
+  .hero h1{font-size:clamp(2.6rem,8vw,5.2rem);margin:.18em 0 .1em;
+    background:linear-gradient(120deg,var(--ram2),var(--ram) 45%,var(--nile2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.02em}
+  .hero .glyph{font-size:1.1em;-webkit-text-fill-color:var(--ram)}
+  .tag{font-size:clamp(1.05rem,2.4vw,1.45rem);color:var(--ink);max-width:760px;margin:.2em auto 0}
+  .sub{color:var(--muted);max-width:680px;margin:18px auto 0;font-size:1.02rem}
+  .cta{margin-top:34px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:12px 22px;border-radius:10px;font-family:inherit;font-size:.98rem;
+    border:1px solid var(--line);transition:.2s}
+  .btn.primary{background:linear-gradient(120deg,var(--ram),var(--ram2));color:#1a1004;border:none;font-weight:600}
+  .btn.primary:hover{transform:translateY(-2px);text-decoration:none;box-shadow:0 10px 30px rgba(217,154,78,.2)}
+  .btn.ghost:hover{border-color:var(--ram);text-decoration:none}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .stat{background:var(--bg2);padding:24px 14px;text-align:center}
+  .stat b{display:block;font-family:"SF Mono",ui-monospace,monospace;font-size:1.9rem;color:var(--ram2)}
+  .stat span{color:var(--muted);font-size:.82rem;letter-spacing:.04em}
+
+  section{padding:68px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .kicker{color:var(--nile2);letter-spacing:.28em;text-transform:uppercase;font-size:.74rem;font-family:"SF Mono",monospace}
+  h2{font-size:clamp(1.6rem,4vw,2.3rem);margin:.25em 0 .4em;letter-spacing:-.01em}
+  .lead{font-size:1.12rem;color:var(--ink);max-width:760px}
+  p{color:#d7d2c4}
+  .muted{color:var(--muted)}
+
+  .grid{display:grid;gap:18px;margin-top:30px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;
+    transition:.2s;position:relative;overflow:hidden}
+  .card:hover{border-color:rgba(217,154,78,.5);transform:translateY(-3px);background:rgba(255,255,255,.05)}
+  .card h3{margin:.1em 0 .35em;font-size:1.05rem;color:var(--ram2)}
+  .card .dom{color:var(--muted);font-size:.9rem}
+  .pill{display:inline-block;font-size:.68rem;padding:2px 9px;border-radius:999px;margin-top:10px;
+    font-family:"SF Mono",monospace;letter-spacing:.03em}
+  .done{background:rgba(76,175,125,.16);color:#8fe3b8;border:1px solid rgba(76,175,125,.3)}
+  .prog{background:rgba(217,154,78,.14);color:var(--ram2);border:1px solid rgba(217,154,78,.3)}
+  .todo{background:rgba(154,166,192,.1);color:var(--muted);border:1px solid rgba(154,166,192,.2)}
+
+  .feat{display:flex;gap:16px;align-items:flex-start}
+  .feat .ic{font-size:1.5rem;flex:none;width:44px;height:44px;display:grid;place-items:center;
+    border-radius:10px;background:rgba(63,126,166,.16);border:1px solid var(--line)}
+  .feat h3{margin:.1em 0 .25em;font-size:1.02rem;color:var(--ink);font-family:inherit}
+
+  .flow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:28px}
+  .phase{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 12px;position:relative}
+  .phase .p{font-family:"SF Mono",monospace;color:var(--ram);font-size:.78rem}
+  .phase b{display:block;margin-top:4px;font-size:.96rem}
+  .phase span{color:var(--muted);font-size:.78rem}
+
+  table{width:100%;border-collapse:collapse;margin-top:24px;font-size:.92rem}
+  th,td{border:1px solid var(--line);padding:10px 12px;text-align:left}
+  th{color:var(--ram2);font-family:"SF Mono",monospace;font-size:.78rem;letter-spacing:.03em}
+  td.yes{color:#8fe3b8}
+  td.no{color:var(--muted)}
+
+  code,.k{font-family:"SF Mono",ui-monospace,monospace;background:rgba(255,255,255,.05);
+    padding:1px 7px;border-radius:6px;font-size:.88em;color:var(--ram2)}
+
+  .shot{width:100%;border-radius:12px;border:1px solid var(--line);margin-top:24px;display:block}
+
+  footer{padding:54px 0 70px;text-align:center;color:var(--muted)}
+  footer .glyph{color:var(--ram);font-size:1.6rem}
+  .hr-egypt{height:2px;margin:0;border:0;background:
+    repeating-linear-gradient(90deg,var(--ram) 0 14px,transparent 14px 28px);opacity:.35}
+
+  @media(max-width:820px){.g3{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:repeat(4,1fr)}.stats{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.g2,.g3{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="glyphrow">𓃝</div>
+  <div class="wrap hero">
+    <div class="eyebrow">Open-Source Memory Compiler</div>
+    <h1><span class="glyph">𓃝</span> Khnum</h1>
+    <p class="tag">The ram-headed god shaped every being on his potter's wheel. This Khnum shapes every memory your silicon needs — on a laptop.</p>
+    <p class="sub">A zero-dependency, laptop-class generator of <b>verified</b> SRAM, register-file, FIFO and ECC-protected memories — each instance shipped with its own self-checking testbench, manifest, embedded formal proof, and a proven path to both FPGA and ASIC.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/Lord1Egypt/Khnum">View the Repository →</a>
+      <a class="btn ghost" href="#kinds">Explore the Memory Kinds</a>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>6</b><span>MEMORY KINDS</span></div>
+    <div class="stat"><b>0</b><span>PIP DEPENDENCIES</span></div>
+    <div class="stat"><b>185+</b><span>AUTOMATED CHECKS, 0 FAIL</span></div>
+    <div class="stat"><b>16 GB</b><span>LAPTOP-SAFE, HARD LIMIT</span></div>
+  </div>
+</header>
+
+<section id="vision">
+  <div class="wrap">
+    <div class="kicker">The Vision</div>
+    <h2>Correct, verified memories — right now, on your laptop.</h2>
+    <p class="lead">Most designs don't need a hand-crafted 6T bitcell macro from a seven-figure PDK toolchain. They need <i>correct, verified, portable</i> memories today — SRAMs, register files, FIFOs, ECC — that synthesize to real BRAM on FPGA and harden to real standard-cell layouts through OpenROAD on ASIC, backed by proofs instead of promises.</p>
+    <p class="muted">Honesty is the brand: a checked roadmap box that isn't mechanically true destroys the point of the project. Every claim below is backed by a test, a formal proof, or a routed GDSII layout you can inspect yourself.</p>
+  </div>
+</section>
+
+<section id="kinds">
+  <div class="wrap">
+    <div class="kicker">The Potter's Wheel</div>
+    <h2>Six memory kinds, one generator.</h2>
+    <p class="lead muted">Every kind ships Verilog-2001 RTL, a self-checking testbench, and a JSON manifest — from one command.</p>
+    <div class="grid g3">
+      <div class="card"><h3>sram_1rw</h3><div class="dom">Single shared read/write port, synchronous read, read-first RDW. The everyday scratchpad.</div><span class="pill done">BRAM-proven ✓</span></div>
+      <div class="card"><h3>sram_1r1w</h3><div class="dom">Separate write + read ports, same clock. Dual-port scratchpad / cache way.</div><span class="pill done">BRAM-proven ✓</span></div>
+      <div class="card"><h3>sram_2r1w</h3><div class="dom">One write port, two independent read ports. Register-file-style access.</div><span class="pill done">BRAM-proven ✓</span></div>
+      <div class="card"><h3>rf_2r1w_ff</h3><div class="dom">Flop-based register file, asynchronous (combinational) reads, depth ≤ 64. The CPU-GPR workhorse.</div><span class="pill done">shipped ✓</span></div>
+      <div class="card"><h3>fifo_sync</h3><div class="dom">Single-clock FIFO — FWFT, full/empty/level flags, every boundary tested.</div><span class="pill done">shipped ✓</span></div>
+      <div class="card"><h3>fifo_async</h3><div class="dom">Dual-clock CDC FIFO — Cummings gray-coded pointers, 2-FF synchronizers.</div><span class="pill done">shipped ✓</span></div>
+    </div>
+    <p class="muted" style="margin-top:22px">Plus: transparent <code>--ecc</code> (Hamming SECDED, single-correct/double-detect) on any SRAM kind, and <code>--bank-depth</code>/<code>--bank-width</code> composable tiling into larger arrays.</p>
+  </div>
+</section>
+
+<section id="proof">
+  <div class="wrap">
+    <div class="kicker">The Proof</div>
+    <h2>Proofs, not promises — at every level.</h2>
+    <div class="grid g2">
+      <div class="feat"><div class="ic">✓</div><div><h3>Self-checking testbenches</h3><p class="muted">Every generated instance ships a Verilator-driven TB with a shadow-model scoreboard — init sweep, random phase, final sweep.</p></div></div>
+      <div class="feat"><div class="ic">𓂀</div><div><h3>Formal proofs (yosys + z3)</h3><p class="muted">Read-first (incl. per-byte-lane), FIFO occupancy and gray-pointer-validity properties — 9 configs proven, vacuity-checked and mutation-tested.</p></div></div>
+      <div class="feat"><div class="ic">⚡</div><div><h3>A third method: cocotb</h3><p class="muted">Independent Python golden models vs. Verilator sim for all 6 kinds — a verification path distinct from both the Verilog TB and the formal proofs.</p></div></div>
+      <div class="feat"><div class="ic">⊞</div><div><h3>Real FPGA BRAM inference</h3><p class="muted">All 3 SRAM kinds × byte-en on/off genuinely infer <code>RAMB18E1</code>/<code>RAMB36E1</code> (Xilinx) and <code>SB_RAM40_4K</code> (iCE40) — 12/12 proven via <code>synth_xilinx</code>/<code>synth_ice40</code>, not just asserted.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="foundry">
+  <div class="wrap">
+    <div class="kicker">The Foundry</div>
+    <h2>Real ASIC layouts, on a 16 GB laptop.</h2>
+    <p class="lead muted">DFFRAM-style standard-cell hardening through OpenROAD/ORFS, tuned to stay laptop-safe. Two sizes hardened so far:</p>
+    <table>
+      <tr><th>design</th><th>platform</th><th>area (µm²)</th><th>util</th><th>WNS (ns)</th><th>route DRC</th><th>peak RAM</th><th>status</th></tr>
+      <tr><td><code>khnum_sram_1rw_256x32</code></td><td>sky130hd</td><td>374,736</td><td>43%</td><td>0.00</td><td>0 viol</td><td>2.17 GB</td><td class="yes">✅ timing closed</td></tr>
+      <tr><td><code>khnum_sram_1rw_1024x32</code></td><td>sky130hd</td><td>1,572,503</td><td>25%</td><td>-0.39</td><td>0 viol</td><td>8.19 GB</td><td class="no">🔧 routes clean, retuning</td></tr>
+    </table>
+    <p class="muted" style="margin-top:14px">Full numbers, gotchas, and the exact recipes: <a href="https://github.com/Lord1Egypt/Khnum/blob/main/harden/HARDEN_RESULTS.md">harden/HARDEN_RESULTS.md</a>.</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <div class="kicker">The Methodology</div>
+    <h2>A disciplined seven-phase lifecycle.</h2>
+    <p class="lead muted">Every phase ends with a checkpoint commit; nothing advances until <code>tools/test_all.py</code> exits 0. A "partial" is never checked as "done."</p>
+    <div class="flow">
+      <div class="phase"><span class="p">P0</span><b>Genesis</b><span>Package + 3 SRAM kinds.</span></div>
+      <div class="phase"><span class="p">P1</span><b>Potter's Wheel</b><span>RF, FIFOs, ECC, banking.</span></div>
+      <div class="phase"><span class="p">P2</span><b>The Proof</b><span>Formal + cocotb, vacuity-checked.</span></div>
+      <div class="phase"><span class="p">P3</span><b>FPGA Gate</b><span>Real BRAM inference proven.</span></div>
+      <div class="phase"><span class="p">P4</span><b>The Foundry</b><span>OpenROAD/ORFS ASIC hardening.</span></div>
+      <div class="phase"><span class="p">P5</span><b>The Scribe</b><span>Docs, demo, characterization.</span></div>
+      <div class="phase"><span class="p">P6</span><b>Ascension</b><span>PyPI release, v1.0.0.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="wrap">
+    <div class="kicker">Why Another Memory Compiler?</div>
+    <h2>A niche neither OpenRAM nor DFFRAM covers.</h2>
+    <table>
+      <tr><th></th><th>Khnum</th><th>OpenRAM</th><th>DFFRAM</th></tr>
+      <tr><td>Dependencies</td><td class="yes">zero (Python stdlib)</td><td class="no">Python + packages + PDK setup</td><td class="no">Python + packages</td></tr>
+      <tr><td>Self-checking TB per instance</td><td class="yes">✅ always, automatically</td><td class="no">partial</td><td class="no">—</td></tr>
+      <tr><td>Formal proof per instance</td><td class="yes">✅ yosys-smtbmc + z3, vacuity + mutation checked</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>FPGA + ASIC from one config</td><td class="yes">✅ portable RTL, BRAM-inference verified</td><td class="no">ASIC only</td><td class="no">ASIC only</td></tr>
+      <tr><td>Runs on a 16 GB laptop</td><td class="yes">✅ hard design constraint</td><td class="no">heavy</td><td class="no">moderate</td></tr>
+    </table>
+  </div>
+</section>
+
+<hr class="hr-egypt">
+<footer>
+  <div class="wrap">
+    <div class="glyph">𓃝</div>
+    <p><b>Khnum</b> — an open-source memory compiler · <a href="https://github.com/Lord1Egypt/Khnum">github.com/Lord1Egypt/Khnum</a></p>
+    <p class="muted" style="font-size:.85rem">Every memory your silicon needs — shaped on a laptop, proven before it's trusted.</p>
+  </div>
+</footer>
+
+</body>
+</html>
