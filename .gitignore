@@ -6,3 +6,7 @@ dist/
 *.egg-info/
 harden/results/**/objects/
 harden/results/**/logs/
+tests/cocotb/gen/
+tests/cocotb/sim_build_*/
+tests/cocotb/results.xml
+tests/cocotb/__pycache__/

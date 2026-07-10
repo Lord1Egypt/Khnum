@@ -13,7 +13,9 @@ output. `mutate()` asserts it actually changed the text, so if an emitter is
 ever refactored the mutation loudly breaks instead of silently no-op'ing.
 """
 
-# kind -> (exact substring in generated RTL, read-first-violating replacement)
+# kind -> (exact substring in generated RTL, property-violating replacement).
+# SRAM entries break read-first; FIFO entries break the box's own safety
+# property (occupancy bound / gray encoding) rather than read-first.
 MUTATIONS = {
     "sram_1rw": (
         "rdata <= mem[addr];",
@@ -27,15 +29,27 @@ MUTATIONS = {
         "if (re0) rdata0 <= mem[raddr0];",
         "if (re0) rdata0 <= (we && waddr==raddr0) ? wdata : mem[raddr0];",
     ),
+    "fifo_sync": (
+        "wire do_push = push && !full;",
+        "wire do_push = push;",
+    ),
+    "fifo_async": (
+        "wire [%d:0] wgray_next = (wbin_next >> 1) ^ wbin_next;",
+        "wire [%d:0] wgray_next = wbin_next;",
+    ),
 }
 
 
-def mutate(text, kind):
-    """Return `text` with its read-first behavior broken. Raises if the kind
-    has no mutation or the target substring is absent (emitter drifted)."""
+def mutate(text, kind, ptr_msb=None):
+    """Return `text` with its property broken. Raises if the kind has no
+    mutation or the target substring is absent (emitter drifted). `ptr_msb` is
+    the pointer MSB index (pointer width - 1, i.e. cfg.aw), only needed for
+    fifo_async since its target is width-parameterized ("wire [ptr_msb:0] ...")."""
     if kind not in MUTATIONS:
         raise ValueError("no mutation defined for kind %r" % kind)
     old, new = MUTATIONS[kind]
+    if kind == "fifo_async":
+        old, new = old % ptr_msb, new % ptr_msb
     if text.count(old) != 1:
         raise ValueError("mutation target for %s not found exactly once "
                          "(found %d) — emitter drifted?" % (kind, text.count(old)))
