@@ -2,8 +2,8 @@
 
 ## ▶▶ RESUME HERE (updated 2026-07-10, session 7)
 
-- **Phase:** P3 The FPGA Gate — ✅ **CLOSED 3/3** (this session). P2 = ✅ 5/5 (PR #6).
-  P1 = ✅ 7/7 (PRs #2–#4).
+- **Phase:** P4 The Foundry (ASIC hardening) — **1/3 sizes done, in progress**. P3 =
+  ✅ 3/3 (this session, PR #7). P2 = ✅ 5/5 (PR #6). P1 = ✅ 7/7 (PRs #2–#4).
 - **P3 result: no RTL bug.** `tools/test_fpga.py` runs `synth_xilinx`/`synth_ice40` on
   all 3 SRAM kinds x byte-en on/off at depth 256 and requires real BRAM cells
   (`RAMB18E1`, `SB_RAM40_4K`) in the `stat` tally — **12/12 PASS first try**, zero
@@ -15,10 +15,23 @@
   flow right after memory-mapping (BRAM techmap already done) and before the broken
   LUT/ABC stage; `stat` there faithfully shows BRAM presence since ABC never touches
   BRAM primitives anyway. Full writeup: `docs/FPGA.md`.
-- **Next task: P4 The Foundry** (ASIC hardening). Copy `KemetCore/flow/harden.sh`'s
-  ORFS/Docker pattern, start with sky130hd at one small size (e.g. 256x32), Docker
-  `--memory=13g --memory-swap=24g`, record peak RSS. Then P5 docs+VHS demo GIF, P6
-  PyPI `khnum-ram`. All per CLAUDE.md.
+- **P4 progress (this session): `khnum_sram_1rw_256x32` hardened to sky130hd,
+  routed GDSII, timing CLOSED (WNS 0.00 ns), 0 routing DRC violations, 374,736 µm²
+  @ 43% utilization, peak route RAM 2.17 GB** (well under the 13 GB Docker cap).
+  `tools/harden.sh <design>` wraps the OpenROAD-flow-scripts Docker image
+  (`--memory=13g --memory-swap=24g` + `LEC_CHECK=0` for the AVX-512 SIGILL gotcha,
+  same as KemetCore). Full numbers: `harden/HARDEN_RESULTS.md`. Gallery screenshots
+  (ORFS's own auto-generated KLayout renders): `docs/GALLERY.md`.
+  **Two real gotchas hit and fixed (both documented in `harden/HARDEN_RESULTS.md`)**:
+  (1) ORFS's `SYNTH_MEMORY_MAX_BITS` gate (default 4096 bits) rejects flip-flop
+  synthesis of memories bigger than that — raised to 16384 in the design's
+  `config.mk` (P4's whole point IS flip-flop hardening of the array, so this is
+  the correct fix, not a workaround); (2) `LEC_CHECK=0` needed — this CPU lacks
+  AVX-512, same as KemetCore's documented fix.
+- **Next task: P4 remaining sizes** — harden 1K×32 and 2K×64 next (add each to the
+  `case` in `tools/harden.sh` + a `harden/designs/sky130hd/<design>/` config; watch
+  `SYNTH_MEMORY_MAX_BITS` per size). Then Liberty/LEF stubs, then P5 docs+VHS demo
+  GIF, P6 PyPI `khnum-ram`. All per CLAUDE.md.
 - **KEY formal facts learned (PR #5+#6):** yowasp-yosys runs in a **WASI sandbox — only
   sees its cwd**, so `formal.py`/tools must invoke it with `cwd=outdir` and bare filenames
   (absolute paths → "file not found"). `async2sync` before `write_smt2` is mandatory (else
@@ -44,7 +57,7 @@
   standalone now proves **9 configs** (was 4). All 6 `tests/cocotb/` suites pass
   standalone via `make CORE=<kind> PYTHON3='env -u PYTHONHOME /usr/bin/python3'`
   (not yet wired into `test_all.py`/CI — see ROADMAP.md note on why).
-- **Branch state:** `feat/p3-fpga-gate`, this session — see PR for merge state.
+- **Branch state:** `feat/p4-foundry-256x32`, this session — see PR for merge state.
 
 ## Honest scoreboard
 
@@ -54,13 +67,32 @@
 | P1 Potter's Wheel | ✅ 7/7, test-proven |
 | P2 The Proof | ✅ 5/5, test-proven |
 | P3 FPGA Gate | ✅ 3/3, test-proven |
-| P4 The Foundry | ⬜ 0/6 |
+| P4 The Foundry | 🔧 3/6, in progress (1/3 sizes hardened) |
 | P5 The Scribe | ⬜ 0/4 |
 | P6 Ascension | ⬜ 0/5 |
 
-**Total: 24/39 (62%) — "partial" ≠ "done".**
+**Total: 27/39 (69%) — "partial" ≠ "done".**
 
 ## Session log
+
+- **2026-07-10 (session 7, cont.)** — P4 first size shipped:
+  `khnum_sram_1rw_256x32` hardened to sky130hd through `tools/harden.sh`
+  (OpenROAD-flow-scripts Docker, mirrors `KemetCore/flow/harden.sh`). Result:
+  routed GDSII, timing CLOSED (WNS 0.00 ns, worst slack +0.05 ns), 0 routing DRC
+  violations, 374,736 µm² @ 43% utilization, peak route RAM 2.17 GB (well under
+  the mandated 13 GB Docker cap — container swap never engaged at this size).
+  Hit and fixed two genuine ORFS/environment gotchas (not Khnum RTL bugs):
+  `SYNTH_MEMORY_MAX_BITS` (ORFS default 4096 bits refuses flip-flop synthesis
+  above that size; raised to 16384 in the design's config.mk — flip-flop
+  hardening of the array IS P4's goal) and `LEC_CHECK=0` (this CPU lacks
+  AVX-512; ORFS's optional post-resize logical-equivalence check needs an
+  AVX-512 binary — identical fix to KemetCore's documented gotcha). Raw ORFS
+  output (`harden/{logs,objects,reports,results}/`) gitignored — 28 MB GDS,
+  regenerable, matches KemetCore's `flow/` (0 such files tracked in git there
+  either); `harden/HARDEN_RESULTS.md` + curated `docs/gallery/*.webp`
+  screenshots (ORFS's own auto-generated KLayout renders, copied out via
+  `docker run --user $(id -u):$(id -g)` since the container writes as root)
+  are the durable, committed evidence. `docs/GALLERY.md` created.
 
 - **2026-07-10 (session 7)** — P3 CLOSED 3/3. Built `tools/test_fpga.py`: runs
   yowasp-yosys `synth_xilinx` and `synth_ice40` on all 3 SRAM kinds x byte-en on/off
