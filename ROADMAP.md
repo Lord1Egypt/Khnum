@@ -128,8 +128,8 @@ peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules
 - [x] **Terminal demo GIF (MANDATORY house rule)**: VHS tape in `docs/demo.tape`,
       GIF embedded at the top of README — every Lord1Egypt CLI project has one
 - [ ] gh-pages landing site (same pattern as KemetCore's)
-- [ ] `docs/INTEGRATION.md`: how to drop Khnum memories into a SoC (KemetCore cores as
-      worked examples)
+- [x] `docs/INTEGRATION.md`: how to drop Khnum memories into a SoC (KemetCore's
+      SethCore register file as a worked, honestly-caveated example)
 
 ## P6 — Ascension (v1.0.0)
 
