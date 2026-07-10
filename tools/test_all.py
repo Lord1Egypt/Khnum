@@ -272,7 +272,16 @@ def test_ecc_standalone(width):
     _lint_and_sim(tag, outdir, name, lint_top=False)
 
 
+def test_formal():
+    """Discharge the embedded read-first formal proofs (yosys + z3)."""
+    print("[formal] read-first proofs (yosys-smtbmc + z3)")
+    ok, _, out = run([PY, os.path.join(ROOT, "tools", "formal.py")], cwd=ROOT)
+    check("formal.py: all proofs non-vacuous + mutation-caught",
+          ok and "FAILURE" not in out, out)
+
+
 def main():
+    quick = "--quick" in sys.argv
     if shutil.which("verilator") is None:
         print("ERROR: verilator not found on PATH — install it first")
         return 1
@@ -287,6 +296,10 @@ def main():
         test_bank(kind, depth, width, bd, bw)
     for width in ECC_WIDTHS:
         test_ecc_standalone(width)
+    if quick:
+        print("[formal] skipped (--quick)")
+    else:
+        test_formal()
 
     print()
     if FAILURES:
@@ -294,8 +307,9 @@ def main():
         for f in FAILURES:
             print("  - " + f)
         return 1
-    print("KHNUM TEST_ALL: ALL GREEN (%d configs + %d banked + %d ECC pairs + CLI hygiene)"
-          % (len(MATRIX), len(BANK_MATRIX), len(ECC_WIDTHS)))
+    print("KHNUM TEST_ALL: ALL GREEN (%d configs + %d banked + %d ECC pairs + CLI hygiene%s)"
+          % (len(MATRIX), len(BANK_MATRIX), len(ECC_WIDTHS),
+             "" if quick else " + formal proofs"))
     return 0
 
 
