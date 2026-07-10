@@ -78,16 +78,20 @@ Goal: Khnum's headline differentiator — proofs, not promises.
 - [x] CI: GitHub Actions `.github/workflows/ci.yml` — ubuntu-latest, apt verilator, pip
       yowasp-yosys + z3-solver, runs `tools/test_all.py` (matrix + formal) on push/PR (PR #5)
 
-## P3 — The FPGA Gate
+## P3 — The FPGA Gate ✅ (completed 2026-07-10)
 
 Goal: prove the "one config → FPGA and ASIC" claim mechanically.
 
-- [ ] `tools/test_fpga.py`: run yowasp-yosys `synth_xilinx` and `synth_ice40` on each
-      generated SRAM; parse the report; **require BRAM/SPRAM inference** (RAMB18/36 or
-      SB_RAM40_4K / SPRAM cells present, zero flip-flop-array fallback for depths ≥ 256)
-- [ ] Fix any inference blockers found (init values, enable structure) without breaking
-      the P0/P1 test matrix
-- [ ] Document per-kind inference results in `docs/FPGA.md`
+- [x] `tools/test_fpga.py`: runs yowasp-yosys `synth_xilinx` and `synth_ice40` on each
+      SRAM kind (depth 256, byte-en on/off); asserts real BRAM/SPRAM cells
+      (`RAMB18E1`/`RAMB36E1`, `SB_RAM40_4K`) in the `stat` cell tally — 12 checks, 0 fail.
+      Wired into `tools/test_all.py` (skippable via `--quick`, same policy as formal).
+- [x] No inference blockers found — Khnum's read-first, synchronous-read, indexed-
+      part-select byte-write RTL already matches both vendors' `memory_libmap` rules on
+      the first try. Zero RTL changes needed; P0/P1 matrix unaffected.
+- [x] Documented per-kind inference results + the `-run begin:map_ffram` methodology
+      (works around a yowasp-yosys WASM-build quirk where the ABC/LUT-mapping stage
+      silently truncates on this machine) in `docs/FPGA.md`.
 
 ## P4 — The Foundry (ASIC hardening, 16 GB-safe)
 

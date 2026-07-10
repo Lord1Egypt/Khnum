@@ -1,15 +1,24 @@
 # Khnum — live status tracker
 
-## ▶▶ RESUME HERE (updated 2026-07-10, session 6)
+## ▶▶ RESUME HERE (updated 2026-07-10, session 7)
 
-- **Phase:** P2 The Proof — ✅ **CLOSED 5/5** (PR #6, this session: byte-lane formal +
-  FIFO formal properties + cocotb suites, on top of PR #5's formal spine). P1 = ✅ 7/7
-  (PRs #2–#4).
-- **Next task: P3 FPGA Gate** (`tools/test_fpga.py`: `yowasp-yosys -p "read_verilog x.v;
-  synth_xilinx -top <name>; stat"` → assert `RAMB18E1|RAMB36E1` for depths ≥ 256, and
-  `synth_ice40` → `SB_RAM40_4K`/SPRAM. If inference fails: check reset-on-rdata / read-enable
-  structure in the emitters first.). Then P4 hardening (Docker `--memory=13g
-  --memory-swap=24g`), P5 docs+VHS demo GIF, P6 PyPI `khnum-ram`. All per CLAUDE.md.
+- **Phase:** P3 The FPGA Gate — ✅ **CLOSED 3/3** (this session). P2 = ✅ 5/5 (PR #6).
+  P1 = ✅ 7/7 (PRs #2–#4).
+- **P3 result: no RTL bug.** `tools/test_fpga.py` runs `synth_xilinx`/`synth_ice40` on
+  all 3 SRAM kinds x byte-en on/off at depth 256 and requires real BRAM cells
+  (`RAMB18E1`, `SB_RAM40_4K`) in the `stat` tally — **12/12 PASS first try**, zero
+  emitter changes needed. Wired into `test_all.py` (skippable via `--quick`).
+  **Toolchain gotcha found and worked around**: this machine's `yowasp-yosys` (WASM
+  build) silently truncates output mid-ABC-pass during the full `synth_xilinx`/
+  `synth_ice40` flow (no error, exit 0, just stops before `stat` prints) — an
+  environment quirk, not a Khnum bug. Fix: `-run begin:map_ffram` stops the synth
+  flow right after memory-mapping (BRAM techmap already done) and before the broken
+  LUT/ABC stage; `stat` there faithfully shows BRAM presence since ABC never touches
+  BRAM primitives anyway. Full writeup: `docs/FPGA.md`.
+- **Next task: P4 The Foundry** (ASIC hardening). Copy `KemetCore/flow/harden.sh`'s
+  ORFS/Docker pattern, start with sky130hd at one small size (e.g. 256x32), Docker
+  `--memory=13g --memory-swap=24g`, record peak RSS. Then P5 docs+VHS demo GIF, P6
+  PyPI `khnum-ram`. All per CLAUDE.md.
 - **KEY formal facts learned (PR #5+#6):** yowasp-yosys runs in a **WASI sandbox — only
   sees its cwd**, so `formal.py`/tools must invoke it with `cwd=outdir` and bare filenames
   (absolute paths → "file not found"). `async2sync` before `write_smt2` is mandatory (else
@@ -35,7 +44,7 @@
   standalone now proves **9 configs** (was 4). All 6 `tests/cocotb/` suites pass
   standalone via `make CORE=<kind> PYTHON3='env -u PYTHONHOME /usr/bin/python3'`
   (not yet wired into `test_all.py`/CI — see ROADMAP.md note on why).
-- **Branch state:** `feat/p2-formal-extend`, PR #6 — see PR for merge state.
+- **Branch state:** `feat/p3-fpga-gate`, this session — see PR for merge state.
 
 ## Honest scoreboard
 
@@ -44,14 +53,30 @@
 | P0 Genesis | ✅ 9/9 boxes, test-proven |
 | P1 Potter's Wheel | ✅ 7/7, test-proven |
 | P2 The Proof | ✅ 5/5, test-proven |
-| P3 FPGA Gate | ⬜ 0/3 |
+| P3 FPGA Gate | ✅ 3/3, test-proven |
 | P4 The Foundry | ⬜ 0/6 |
 | P5 The Scribe | ⬜ 0/4 |
 | P6 Ascension | ⬜ 0/5 |
 
-**Total: 21/39 (54%) — "partial" ≠ "done".**
+**Total: 24/39 (62%) — "partial" ≠ "done".**
 
 ## Session log
+
+- **2026-07-10 (session 7)** — P3 CLOSED 3/3. Built `tools/test_fpga.py`: runs
+  yowasp-yosys `synth_xilinx` and `synth_ice40` on all 3 SRAM kinds x byte-en on/off
+  at depth 256, asserts real BRAM cells (`RAMB18E1`, `SB_RAM40_4K`) in the `stat`
+  tally via regex on the cell-count lines — 12/12 PASS, zero RTL changes needed
+  (Khnum's read-first/sync-read/indexed-part-select emitter style already matches
+  both vendors' `memory_libmap` rules). Wired into `test_all.py` (`--quick` skips it,
+  same policy as `formal.py`). Found and worked around a real toolchain quirk:
+  this machine's `yowasp-yosys` (WASM build) silently truncates output mid-ABC-pass
+  during the full `synth_xilinx`/`synth_ice40` flow — exit 0, no error, just stops
+  before `stat` ever prints. Diagnosed via `-run <from>:<to>` staged execution:
+  `-run begin:map_ffram` stops right after `memory_libmap` + BRAM techmap (confirmed
+  present via the `stat` cell tally) and before the broken LUT/ABC stage — sound
+  because ABC never touches fixed BRAM primitives. Documented in `docs/FPGA.md`.
+  `python3 tools/test_all.py` still ALL GREEN, 185 checks (173 + 12 new), no
+  regression.
 
 - **2026-07-10 (session 6, PR #6)** — P2 CLOSED 5/5. Extended `khnum/rtl.py`'s formal
   scoreboard with `_formal_sram_be`: per-byte-lane `f_valid`/`f_exp` tracking so

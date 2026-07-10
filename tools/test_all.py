@@ -280,6 +280,14 @@ def test_formal():
           ok and "FAILURE" not in out, out)
 
 
+def test_fpga():
+    """Discharge the FPGA BRAM/SPRAM inference gate (yosys synth_xilinx/synth_ice40)."""
+    print("[fpga] BRAM/SPRAM inference (synth_xilinx + synth_ice40)")
+    ok, _, out = run([PY, os.path.join(ROOT, "tools", "test_fpga.py")], cwd=ROOT)
+    check("test_fpga.py: all configs infer real BRAM/SPRAM",
+          ok and "FAILURE" not in out, out)
+
+
 def main():
     quick = "--quick" in sys.argv
     if shutil.which("verilator") is None:
@@ -298,8 +306,10 @@ def main():
         test_ecc_standalone(width)
     if quick:
         print("[formal] skipped (--quick)")
+        print("[fpga] skipped (--quick)")
     else:
         test_formal()
+        test_fpga()
 
     print()
     if FAILURES:
@@ -309,7 +319,7 @@ def main():
         return 1
     print("KHNUM TEST_ALL: ALL GREEN (%d configs + %d banked + %d ECC pairs + CLI hygiene%s)"
           % (len(MATRIX), len(BANK_MATRIX), len(ECC_WIDTHS),
-             "" if quick else " + formal proofs"))
+             "" if quick else " + formal proofs + fpga gate"))
     return 0
 
 
