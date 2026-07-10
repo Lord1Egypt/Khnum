@@ -10,6 +10,8 @@ self-checking testbench, manifest, embedded formal proof (yosys+z3, vacuity-chec
 mutation-tested), and (roadmap) OpenROAD hardening recipe** — and the whole flow is
 engineered to fit in **16 GB of RAM**.
 
+<p align="center"><img src="docs/demo.gif" alt="Khnum terminal demo" width="700"/></p>
+
 ```
 $ python3 -m khnum gen --kind sram_1rw --depth 1024 --width 32 --byte-en
 khnum: wrote build/khnum_sram_1rw_1024x32_be.v
