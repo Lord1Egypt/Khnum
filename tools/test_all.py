@@ -49,6 +49,20 @@ MATRIX = [
 # Standalone SECDED encoder/decoder widths (via `khnum ecc`).
 ECC_WIDTHS = [8, 32, 64]
 
+# kind, depth, width, bank_depth, bank_width — the banking composer tiles one
+# base macro into a larger array; wrapper keeps identical ports so the standard
+# TB drives it. Covers deep (address-decode), wide (lane-concat), and grid tiling
+# across every bankable kind, incl. the async register file.
+BANK_MATRIX = [
+    ("sram_1rw", 256, 32, 4, 1),
+    ("sram_1rw", 64, 32, 1, 4),
+    ("sram_1rw", 512, 64, 8, 2),
+    ("sram_1r1w", 256, 32, 4, 2),
+    ("sram_2r1w", 128, 16, 2, 1),
+    ("sram_2r1w", 64, 32, 2, 2),
+    ("rf_2r1w_ff", 32, 32, 2, 1),
+]
+
 FAILURES = []
 
 
@@ -148,6 +162,26 @@ def test_cli_hygiene():
          "--width", "32", "--ecc", "-o", os.path.join(BUILD, "bad")],
         cwd=ROOT, expect_rc=2)
     check("reject --ecc on fifo (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "fifo_sync", "--depth", "16",
+         "--width", "32", "--bank-depth", "2", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject banking on fifo (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "sram_1rw", "--depth", "100",
+         "--width", "32", "--bank-depth", "4", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject --bank-depth on non-pow2 depth (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "sram_1rw", "--depth", "64",
+         "--width", "30", "--bank-width", "4", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject --bank-width not dividing width (exit 2)", ok, out)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", "sram_1rw", "--depth", "64",
+         "--width", "32", "--bank-depth", "2", "--ecc", "-o", os.path.join(BUILD, "bad")],
+        cwd=ROOT, expect_rc=2)
+    check("reject banking with --ecc (exit 2)", ok, out)
 
 
 def test_config(kind, depth, width, byte_en, ecc):
@@ -178,6 +212,33 @@ def test_config(kind, depth, width, byte_en, ecc):
         check(tag + ": manifest sane (ecc)", base_ok and ecc_ok, json.dumps(m))
     else:
         check(tag + ": manifest sane", base_ok, json.dumps(m))
+
+    _lint_and_sim(tag, outdir, name)
+
+
+def test_bank(kind, depth, width, bank_depth, bank_width):
+    tag = "%s_%dx%d_bk%dx%d" % (kind, depth, width, bank_depth, bank_width)
+    print("[bank] " + tag)
+    outdir = os.path.join(BUILD, tag)
+    ok, _, out = run(
+        [PY, "-m", "khnum", "gen", "--kind", kind, "--depth", str(depth),
+         "--width", str(width), "--bank-depth", str(bank_depth),
+         "--bank-width", str(bank_width), "-o", outdir], cwd=ROOT)
+    check(tag + ": generate", ok, out)
+    if not ok:
+        return
+
+    name = "khnum_%s" % tag
+    man = os.path.join(outdir, name + ".manifest.json")
+    with open(man) as fh:
+        m = json.load(fh)
+    bk = m.get("banking", {})
+    check(tag + ": manifest sane",
+          m["depth"] == depth and m["width"] == width and m["kind"] == kind
+          and bk.get("bank_depth") == bank_depth
+          and bk.get("bank_width") == bank_width
+          and bk.get("num_banks") == bank_depth * bank_width
+          and m.get("children") == [name + "_mac"], json.dumps(m))
 
     _lint_and_sim(tag, outdir, name)
 
@@ -222,6 +283,8 @@ def main():
     test_cli_hygiene()
     for kind, depth, width, byte_en, ecc in MATRIX:
         test_config(kind, depth, width, byte_en, ecc)
+    for kind, depth, width, bd, bw in BANK_MATRIX:
+        test_bank(kind, depth, width, bd, bw)
     for width in ECC_WIDTHS:
         test_ecc_standalone(width)
 
@@ -231,8 +294,8 @@ def main():
         for f in FAILURES:
             print("  - " + f)
         return 1
-    print("KHNUM TEST_ALL: ALL GREEN (%d configs + %d ECC pairs + CLI hygiene)"
-          % (len(MATRIX), len(ECC_WIDTHS)))
+    print("KHNUM TEST_ALL: ALL GREEN (%d configs + %d banked + %d ECC pairs + CLI hygiene)"
+          % (len(MATRIX), len(BANK_MATRIX), len(ECC_WIDTHS)))
     return 0
 
 

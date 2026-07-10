@@ -2,33 +2,46 @@
 
 ## ▶▶ RESUME HERE (updated 2026-07-10)
 
-- **Phase:** P1 The Potter's Wheel — 4/7 boxes (rf_2r1w_ff + fifo_sync + fifo_async in
-  PR #2; `ecc_secded` in PR #3).
-- **Next task:** Banking composer per CLAUDE.md "P1" spec — `--bank-depth N` /
-  `--bank-width N` wrapper that tiles base macros (address-decode deep tiling,
-  lane-concat wide tiling); manifest gains `"children"`; keep identical top ports so the
-  standard TB drives it; test via the same glob-based multi-file compile in test_all.
-  After that: matrix ≥ 16 box (already at 16 + 3 ECC — just check it) + README honesty
-  pass (move RF/FIFO/ECC to shipped) → closes P1. Then P2 (formal).
-- **Baseline health:** `python3 tools/test_all.py` → `ALL GREEN (16 configs + 3 ECC
-  pairs + CLI hygiene)` on 2026-07-10 (Verilator 5.020, Python 3.13).
-- **Branch state:** main clean after PR #3.
+- **Phase:** P1 The Potter's Wheel — ✅ **7/7 COMPLETE** (rf_2r1w_ff + fifo_sync +
+  fifo_async in PR #2; `ecc_secded` in PR #3; banking composer + matrix ≥16 + README
+  honesty pass in PR #4).
+- **Next task:** **Start P2 — The Proof.** Per repo CLAUDE.md "P2" spec: (1) cocotb
+  suites under `tests/cocotb/` mirroring `KemetCore/projects/racore/rtl/tb/Makefile`
+  (SIM=verilator), one per kind; (2) formal properties embedded via `` `ifdef FORMAL ``
+  in the emitters (no `bind` in yosys 0.6x) — rdata==golden shadow, byte lanes only touch
+  masked bytes, FIFO never over/underflows, gray pointers change 1 bit; (3) `tools/formal.py`
+  = `read_verilog -formal -DFORMAL` → `prep` → **`async2sync` (MANDATORY)** → `write_smt2`
+  → smtbmc z3, with a **vacuity assertion count** (0 asserts = FAIL) and `tools/mutate.py`
+  mutation testing; (4) `.github/workflows/ci.yml`. Add a `--quick` flag to test_all if
+  formal runtime > 5 min.
+- **Baseline health:** `python3 tools/test_all.py` → `ALL GREEN (16 configs + 7 banked +
+  3 ECC pairs + CLI hygiene)` — 172 checks, 0 fail — on 2026-07-10 (Verilator 5.020,
+  Python 3.13).
+- **Branch state:** main clean after PR #4.
 
 ## Honest scoreboard
 
 | Phase | State |
 |---|---|
 | P0 Genesis | ✅ 9/9 boxes, test-proven |
-| P1 Potter's Wheel | 🔧 4/7 |
+| P1 Potter's Wheel | ✅ 7/7, test-proven |
 | P2 The Proof | ⬜ 0/5 |
 | P3 FPGA Gate | ⬜ 0/3 |
 | P4 The Foundry | ⬜ 0/6 |
 | P5 The Scribe | ⬜ 0/4 |
 | P6 Ascension | ⬜ 0/5 |
 
-**Total: 13/39 (33%) — "partial" ≠ "done".**
+**Total: 16/39 (41%) — "partial" ≠ "done".**
 
 ## Session log
+
+- **2026-07-10 (session 4, PR #4)** — P1 CLOSED. Banking composer (`khnum/bank.py`):
+  `--bank-depth N` (pow2, high-address decode + registered read-select mux for the sync
+  kinds, live mux for the async rf) / `--bank-width N` (lane-concat), composable into a
+  D×W grid, tiling one deterministic `<name>_mac` base macro. Wrapper keeps identical
+  external ports so the standard TB drives it unchanged. Verified on all 3 sram kinds +
+  rf, deep/wide/grid. test_all +7 banked configs + 4 banking hygiene rejections (172
+  checks, 0 fail). README honesty pass: RF/FIFO/ECC/banking all moved to "shipped".
 
 - **2026-07-10 (session 3, PR #3)** — P1 `ecc_secded`: Hamming SECDED encoder/decoder
   emitters (`khnum/ecc.py`), standalone `khnum ecc --width K` pair + fault-injection TB
