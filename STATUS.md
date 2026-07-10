@@ -17,7 +17,7 @@
   BRAM primitives anyway. Full writeup: `docs/FPGA.md`.
 - **P4 progress (this session): `khnum_sram_1rw_256x32` hardened to sky130hd,
   routed GDSII, timing CLOSED (WNS 0.00 ns), 0 routing DRC violations, 374,736 µm²
-  @ 43% utilization, peak route RAM 2.17 GB** (well under the 13 GB Docker cap).
+  @ 43% utilization, peak route RAM 2.11 GB** (well under the 13 GB Docker cap).
   `tools/harden.sh <design>` wraps the OpenROAD-flow-scripts Docker image
   (`--memory=13g --memory-swap=24g` + `LEC_CHECK=0` for the AVX-512 SIGILL gotcha,
   same as KemetCore). Full numbers: `harden/HARDEN_RESULTS.md`. Gallery screenshots
@@ -111,7 +111,7 @@
   `khnum_sram_1rw_256x32` hardened to sky130hd through `tools/harden.sh`
   (OpenROAD-flow-scripts Docker, mirrors `KemetCore/flow/harden.sh`). Result:
   routed GDSII, timing CLOSED (WNS 0.00 ns, worst slack +0.05 ns), 0 routing DRC
-  violations, 374,736 µm² @ 43% utilization, peak route RAM 2.17 GB (well under
+  violations, 374,736 µm² @ 43% utilization, peak route RAM 2.11 GB (well under
   the mandated 13 GB Docker cap — container swap never engaged at this size).
   Hit and fixed two genuine ORFS/environment gotchas (not Khnum RTL bugs):
   `SYNTH_MEMORY_MAX_BITS` (ORFS default 4096 bits refuses flip-flop synthesis

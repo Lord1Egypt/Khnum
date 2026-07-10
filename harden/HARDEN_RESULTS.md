@@ -9,10 +9,16 @@ Raw ORFS output (`harden/{logs,objects,reports,results}/`) is gitignored —
 multi-GB scale and fully regenerable via `tools/harden.sh <design>` — mirroring
 KemetCore's `flow/` (0 GDS/log/object files tracked in git there either).
 This file + the curated screenshots in `docs/gallery/` are the durable record.
+This table is now maintained by `tools/characterize.py` (`docs/CHARACTERIZATION.md`
+is its auto-generated output) — regenerate rather than hand-edit numbers.
+**RAM figures are GiB** (KB/1024/1024, matching `free`/`docker stats`), not
+decimal GB — an earlier draft of this file mixed the two and slightly
+overstated a couple of entries; fixed once `tools/characterize.py` existed to
+compute them consistently.
 
 | design | platform | GDS | area (µm²) | util | clock period (ns) | WNS (ns) | route DRC | peak route RAM | closes |
 |--------|----------|----:|-----------:|:----:|-------------------:|---------:|:---------:|----------------:|:------:|
-| `khnum_sram_1rw_256x32` | sky130hd | 28 MB | 374,736 | 43% | 4.0 | 0.00 (worst slack +0.05) | 0 viol | 2.17 GB | ✅ |
+| `khnum_sram_1rw_256x32` | sky130hd | 28 MB | 374,736 | 43% | 4.0 | 0.00 (worst slack +0.05) | 0 viol | 2.11 GB | ✅ |
 | `khnum_sram_1rw_1024x32` | sky130hd | 155 MB | 1,572,503 | 25% | 4.0 | **-0.39** | 0 viol (1 residual antenna) | 8.19 GB | ❌ **not yet** |
 
 `khnum_sram_1rw_1024x32` routes cleanly (0 geometric routing-DRC violations,
@@ -44,7 +50,7 @@ Runs inside `openroad/orfs:latest` with `--memory=13g --memory-swap=24g`
 post-resize logical-equivalence check, whose bundled formal binary is
 AVX-512-only and SIGILLs on this machine's Coffee Lake CPU — same fix as
 KemetCore's `flow/harden.sh`, see its `FLOW.md`). Peak RAM actually used
-during the heaviest stage (detail routing, `5_2_route.log`) was **2.17 GB** —
+during the heaviest stage (detail routing, `5_2_route.log`) was **2.11 GB** —
 comfortably inside the 13 GB cap; container swap was never engaged for this
 design size.
 
