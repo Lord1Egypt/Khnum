@@ -164,15 +164,20 @@ def _write_block(cfg, we_expr, addr_sig, data_sig, mask_sig):
 
 def emit_rtl(cfg):
     if cfg.kind == "sram_1rw":
-        return _emit_sram_1rw(cfg)
-    if cfg.kind == "sram_1r1w":
-        return _emit_sram_1r1w(cfg)
-    if cfg.kind == "sram_2r1w":
-        return _emit_sram_2r1w(cfg)
-    if cfg.kind == "rf_2r1w_ff":
+        text = _emit_sram_1rw(cfg)
+    elif cfg.kind == "sram_1r1w":
+        text = _emit_sram_1r1w(cfg)
+    elif cfg.kind == "sram_2r1w":
+        text = _emit_sram_2r1w(cfg)
+    elif cfg.kind == "rf_2r1w_ff":
         return _emit_rf_2r1w_ff(cfg)
-    from .fifo import emit_fifo
-    return emit_fifo(cfg)
+    else:
+        from .fifo import emit_fifo
+        return emit_fifo(cfg)
+    # Embed the read-first formal proof on full-word SRAM writes (P2).
+    if not cfg.byte_en:
+        text = _splice_formal(text, _formal_for(cfg))
+    return text
 
 
 def _emit_rf_2r1w_ff(cfg):
@@ -305,3 +310,60 @@ def _indent_write(block):
     for line in block.splitlines(True):
         out.append(line[2:] if line.startswith("      ") else line)
     return "".join(out)
+
+
+# --- Formal properties (P2) -------------------------------------------------
+# Every synchronous SRAM ships an embedded read-first proof, active only under
+# `` `ifdef FORMAL `` (invisible to Verilator/Icarus/synthesis, which never
+# define it). The property is a symbolic-address scoreboard: pick one arbitrary
+# but fixed address `f_addr`, mirror writes to it in a shadow reg, capture the
+# PRE-write shadow value on every read of that address (read-first), and assert
+# the registered rdata matches one cycle later. `tools/formal.py` discharges it
+# with yosys+z3 (async2sync, vacuity-counted) and `tools/mutate.py` proves it is
+# non-vacuous. Byte-enable variants need per-lane valid tracking (P2 follow-up),
+# so the block is emitted only for full-word writes.
+
+def _splice_formal(text, fblock):
+    i = text.rstrip().rfind("endmodule")
+    return text[:i] + fblock + text[i:]
+
+
+def _formal_sram(cfg, read_ports, wr_cond, wr_addr):
+    """read_ports: list of (suffix, read_enable_expr, read_addr_expr)."""
+    aw, w = cfg.aw, cfg.width
+    L = []
+    L.append("`ifdef FORMAL")
+    L.append("  // Khnum read-first proof: symbolic-address scoreboard (yosys+z3).")
+    L.append("  (* anyconst *) reg [%d:0] f_addr;" % (aw - 1))
+    L.append("  reg [%d:0] f_data;" % (w - 1))
+    L.append("  reg        f_valid = 1'b0;")
+    for suf, _, _ in read_ports:
+        L.append("  reg        f_rd%s = 1'b0;" % suf)
+        L.append("  reg [%d:0] f_exp%s;" % (w - 1, suf))
+        L.append("  reg        f_ev%s = 1'b0;" % suf)
+    L.append("  always @(posedge clk) begin")
+    for suf, re_expr, raddr in read_ports:
+        L.append("    if ((%s) && %s == f_addr) begin" % (re_expr, raddr))
+        L.append("      f_rd%s <= 1'b1; f_exp%s <= f_data; f_ev%s <= f_valid;" % (suf, suf, suf))
+        L.append("    end else f_rd%s <= 1'b0;" % suf)
+    L.append("    if ((%s) && %s == f_addr) begin" % (wr_cond, wr_addr))
+    L.append("      f_data <= wdata; f_valid <= 1'b1;")
+    L.append("    end")
+    L.append("  end")
+    L.append("  always @(posedge clk) begin")
+    for suf, _, _ in read_ports:
+        L.append("    if (f_rd%s && f_ev%s) assert (rdata%s == f_exp%s);" % (suf, suf, suf, suf))
+    L.append("  end")
+    L.append("`endif")
+    return "\n".join(L) + "\n"
+
+
+def _formal_for(cfg):
+    if cfg.kind == "sram_1rw":
+        return _formal_sram(cfg, [("", "ce", "addr")], "ce && we", "addr")
+    if cfg.kind == "sram_1r1w":
+        return _formal_sram(cfg, [("", "re", "raddr")], "we", "waddr")
+    if cfg.kind == "sram_2r1w":
+        return _formal_sram(cfg, [("0", "re0", "raddr0"), ("1", "re1", "raddr1")],
+                            "we", "waddr")
+    return ""

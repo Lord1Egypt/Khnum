@@ -2,22 +2,25 @@
 
 ## ▶▶ RESUME HERE (updated 2026-07-10)
 
-- **Phase:** P1 The Potter's Wheel — ✅ **7/7 COMPLETE** (rf_2r1w_ff + fifo_sync +
-  fifo_async in PR #2; `ecc_secded` in PR #3; banking composer + matrix ≥16 + README
-  honesty pass in PR #4).
-- **Next task:** **Start P2 — The Proof.** Per repo CLAUDE.md "P2" spec: (1) cocotb
-  suites under `tests/cocotb/` mirroring `KemetCore/projects/racore/rtl/tb/Makefile`
-  (SIM=verilator), one per kind; (2) formal properties embedded via `` `ifdef FORMAL ``
-  in the emitters (no `bind` in yosys 0.6x) — rdata==golden shadow, byte lanes only touch
-  masked bytes, FIFO never over/underflows, gray pointers change 1 bit; (3) `tools/formal.py`
-  = `read_verilog -formal -DFORMAL` → `prep` → **`async2sync` (MANDATORY)** → `write_smt2`
-  → smtbmc z3, with a **vacuity assertion count** (0 asserts = FAIL) and `tools/mutate.py`
-  mutation testing; (4) `.github/workflows/ci.yml`. Add a `--quick` flag to test_all if
-  formal runtime > 5 min.
+- **Phase:** P2 The Proof — 🔧 **3/5** (formal spine shipped in PR #5: `tools/formal.py`
+  with mandatory vacuity count, `tools/mutate.py`, CI workflow, and SRAM read-first
+  proofs). P1 = ✅ 7/7 (PRs #2–#4).
+- **Next task (continue P2):** (1) **Extend formal properties** — the two open sub-parts
+  of the "formal properties" box: byte-lane masks (per-lane valid tracking in the
+  scoreboard — the naive full-word model FAILS on `--byte-en`, confirmed in scratchpad)
+  and the FIFO properties (never over/underflow via a symbolic occupancy invariant;
+  gray pointers change exactly 1 bit). Add each to `khnum/fifo.py` + rf under
+  `` `ifdef FORMAL `` and to `FORMAL_MATRIX`. (2) **cocotb suites** under `tests/cocotb/`,
+  SIM=verilator, mirroring `KemetCore/projects/racore/rtl/tb/Makefile`, one per kind.
+- **KEY formal facts learned (PR #5):** yowasp-yosys runs in a **WASI sandbox — only sees
+  its cwd**, so `formal.py`/tools must invoke it with `cwd=outdir` and bare filenames
+  (absolute paths → "file not found"). `async2sync` before `write_smt2` is mandatory (else
+  0 assertions). The read-first scoreboard uses `(* anyconst *)` symbolic address; BMC
+  depth 14–15 with z3 proves in seconds. Byte-en needs per-lane `f_valid`.
 - **Baseline health:** `python3 tools/test_all.py` → `ALL GREEN (16 configs + 7 banked +
-  3 ECC pairs + CLI hygiene)` — 172 checks, 0 fail — on 2026-07-10 (Verilator 5.020,
-  Python 3.13).
-- **Branch state:** main clean after PR #4.
+  3 ECC pairs + CLI hygiene + formal proofs)` — **173 checks, 0 fail** — 2026-07-10
+  (Verilator 5.020, yosys 0.66, z3 4.16, Python 3.13). `--quick` skips formal.
+- **Branch state:** main clean after PR #5.
 
 ## Honest scoreboard
 
@@ -25,15 +28,25 @@
 |---|---|
 | P0 Genesis | ✅ 9/9 boxes, test-proven |
 | P1 Potter's Wheel | ✅ 7/7, test-proven |
-| P2 The Proof | ⬜ 0/5 |
+| P2 The Proof | 🔧 3/5 |
 | P3 FPGA Gate | ⬜ 0/3 |
 | P4 The Foundry | ⬜ 0/6 |
 | P5 The Scribe | ⬜ 0/4 |
 | P6 Ascension | ⬜ 0/5 |
 
-**Total: 16/39 (41%) — "partial" ≠ "done".**
+**Total: 19/39 (49%) — "partial" ≠ "done".**
 
 ## Session log
+
+- **2026-07-10 (session 5, PR #5)** — P2 formal spine. `tools/formal.py`:
+  yosys `read_verilog -formal -DFORMAL` → `prep` → **`async2sync`** → `write_smt2`, with a
+  mandatory vacuity count (`yosys-smt2-assert` ≥ 1) then z3 smtbmc; proves the read-first
+  property on 4 SRAM configs (all 3 kinds). Embedded `` `ifdef FORMAL `` symbolic-address
+  scoreboard in the sram emitters (full-word writes only). `tools/mutate.py` breaks
+  read-first → `formal.py` requires the proof to FAIL (non-vacuity, mutation-caught).
+  `.github/workflows/ci.yml` runs the whole gate on push/PR. test_all runs formal by
+  default (`--quick` skips). 173 checks, 0 fail. Learned: yowasp-yosys is WASI-sandboxed
+  to its cwd.
 
 - **2026-07-10 (session 4, PR #4)** — P1 CLOSED. Banking composer (`khnum/bank.py`):
   `--bank-depth N` (pow2, high-address decode + registered read-select mux for the sync

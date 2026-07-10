@@ -53,13 +53,15 @@ Goal: Khnum's headline differentiator — proofs, not promises.
 - [ ] Formal properties embedded in generated RTL under `` `ifdef FORMAL `` (no `bind` —
       yosys 0.6x has none): rdata matches a golden shadow process, write lanes only
       change masked bytes, FIFO never overflows/underflows, gray pointers change 1 bit
-- [ ] `tools/formal.py`: runs yowasp-yosys → `async2sync` → `write_smt2` → yowasp-yosys-smtbmc
-      (z3). **MANDATORY: count assertions in the SMT2 output; a proof with 0 assertions
-      is VACUOUS and counts as FAIL** (KemetCore lesson — 8/11 "proofs" once checked nothing)
-- [ ] Mutation testing: `tools/mutate.py` flips one operator/constant per run and requires
-      the formal proof (or TB) to FAIL — a proof that survives mutations is broken
-- [ ] CI: GitHub Actions running test_all + formal on every PR (ubuntu-latest, apt
-      verilator, pip yowasp-yosys)
+      — **partial (PR #5): SRAM read-first scoreboard shipped on all 3 sram kinds
+      (full-word writes); byte-lane masks + FIFO over/underflow + gray-pointer props pending**
+- [x] `tools/formal.py`: runs yowasp-yosys → `async2sync` → `write_smt2` → yowasp-yosys-smtbmc
+      (z3). **Vacuity enforced**: counts `yosys-smt2-assert` in the SMT2; 0 assertions = FAIL.
+      Proves 4 SRAM configs; yosys runs cwd=outdir (WASI sandbox) (PR #5)
+- [x] Mutation testing: `tools/mutate.py` breaks read-first (read→write-through) per kind
+      and `formal.py` REQUIRES the proof to fail; a mutation that survives fails the run (PR #5)
+- [x] CI: GitHub Actions `.github/workflows/ci.yml` — ubuntu-latest, apt verilator, pip
+      yowasp-yosys + z3-solver, runs `tools/test_all.py` (matrix + formal) on push/PR (PR #5)
 
 ## P3 — The FPGA Gate
 

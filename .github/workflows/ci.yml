@@ -1,0 +1,38 @@
+name: khnum-ci
+
+# Verification is the product: every push and PR must pass the full gate —
+# generation, manifest sanity, Verilator lint (-Wall, zero warnings) + sim on
+# the whole matrix, and the yosys+z3 read-first formal proofs (non-vacuous,
+# mutation-caught). A red main is never acceptable.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+          verilator --version
+
+      - name: Install formal toolchain (yosys + z3, WASM/pip)
+        run: |
+          python -m pip install --upgrade pip
+          pip install yowasp-yosys z3-solver
+          yowasp-yosys --version
+
+      - name: Run full verification gate (matrix + formal proofs)
+        run: python3 tools/test_all.py
