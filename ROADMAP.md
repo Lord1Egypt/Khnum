@@ -22,7 +22,7 @@ Rules of this file:
       zero-warning, Verilator --binary --timing sim) — **ALL GREEN**
 - [x] README, ROADMAP, STATUS, CLAUDE.md handoff, LICENSE (Apache-2.0), CONTRIBUTING
 
-## P1 — The Potter's Wheel (memory suite)
+## P1 — The Potter's Wheel (memory suite) ✅ (completed 2026-07-10)
 
 Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
 
@@ -36,12 +36,13 @@ Goal: Khnum generates every on-chip memory a real SoC needs, not just SRAM.
       sram kinds (data widths 4–1024, incl. 8/32/64; single-error corrected, double-error
       detected; standalone TB injects **all** 1-bit and **all** 2-bit faults ×25 trials
       and checks correction/detection flags) (PR #3)
-- [ ] Banking composer: `--bank-depth N` / `--bank-width N` emit a wrapper that tiles
-      base macros (address-decode deep tiling, lane-concat wide tiling); manifest lists
-      the hierarchy
-- [ ] Extend `tools/test_all.py` matrix to cover every new kind/option (target ≥ 16
-      matrix entries), keep lint -Wall zero-warning
-- [ ] README: move shipped items out of "roadmap" column honestly
+- [x] Banking composer: `--bank-depth N` / `--bank-width N` emit a wrapper that tiles one
+      deterministic base macro (address-decode deep tiling + registered read-select mux,
+      lane-concat wide tiling, composable into a grid); identical external ports so the
+      standard TB drives it; manifest lists the hierarchy (`children` + `banking`) (PR #4)
+- [x] Extend `tools/test_all.py` matrix to cover every new kind/option: **16 configs +
+      7 banked + 3 standalone ECC + CLI hygiene**, all lint -Wall zero-warning (PR #4)
+- [x] README: RF / FIFO / ECC / banking moved from "roadmap" to shipped honestly (PR #4)
 
 ## P2 — The Proof (verification-first)
 

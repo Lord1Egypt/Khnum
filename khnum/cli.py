@@ -16,13 +16,20 @@ from .tb import emit_tb
 
 def _cmd_gen(args):
     cfg = Config(args.kind, args.depth, args.width, byte_en=args.byte_en,
-                 name=args.name, ecc=args.ecc)
+                 name=args.name, ecc=args.ecc,
+                 bank_depth=args.bank_depth, bank_width=args.bank_width)
     outdir = args.output
     os.makedirs(outdir, exist_ok=True)
     products = {
         os.path.join(outdir, cfg.name + ".manifest.json"): cfg.manifest_json(),
     }
-    if cfg.ecc:
+    if cfg.banked:
+        from .bank import bank_geometry, emit_bank_wrapper
+        perd, perw = bank_geometry(cfg)
+        mac_cfg = Config(cfg.kind, perd, perw, name=cfg.name + "_mac")
+        products[os.path.join(outdir, cfg.name + ".v")] = emit_bank_wrapper(cfg)
+        products[os.path.join(outdir, cfg.name + "_mac.v")] = emit_rtl(mac_cfg)
+    elif cfg.ecc:
         from .ecc import code_width, emit_ecc_wrapper, emit_secded_dec, emit_secded_enc
         core_cfg = Config(cfg.kind, cfg.depth, code_width(cfg.width),
                           name=cfg.name + "_core")
@@ -80,7 +87,9 @@ def _cmd_list(_args):
     }
     for kind in KINDS:
         print("  %-10s  %s" % (kind, descriptions[kind]))
-    print("options: --depth N --width N [--byte-en] [--name STR] [-o DIR] [--no-tb]")
+    print("gen options: --depth N --width N [--byte-en] [--ecc] "
+          "[--bank-depth N] [--bank-width N] [--name STR] [-o DIR] [--no-tb]")
+    print("also: khnum ecc --width K   (standalone SECDED encoder/decoder pair)")
     return 0
 
 
@@ -100,6 +109,10 @@ def build_parser():
     g.add_argument("--byte-en", action="store_true", help="per-byte write lanes (width %% 8 == 0)")
     g.add_argument("--ecc", action="store_true",
                    help="SECDED-protect the memory (sram kinds; excludes --byte-en)")
+    g.add_argument("--bank-depth", type=int, default=1,
+                   help="tile into N depth banks (pow2, address-decoded; sram_*/rf only)")
+    g.add_argument("--bank-width", type=int, default=1,
+                   help="tile into N width slices (lane-concat; sram_*/rf only)")
     g.add_argument("--name", default=None, help="override module name")
     g.add_argument("-o", "--output", default="build", help="output directory (default: build)")
     g.add_argument("--no-tb", action="store_true", help="skip testbench emission")

@@ -23,7 +23,8 @@ RF_MAX_DEPTH = 64  # flop-based register files get expensive fast
 class Config:
     """Validated configuration for one memory instance."""
 
-    def __init__(self, kind, depth, width, byte_en=False, name=None, ecc=False):
+    def __init__(self, kind, depth, width, byte_en=False, name=None, ecc=False,
+                 bank_depth=1, bank_width=1):
         if kind not in KINDS:
             raise ValueError("unknown kind %r (choose from %s)" % (kind, ", ".join(KINDS)))
         if depth < 2 or depth > (1 << 24):
@@ -48,13 +49,42 @@ class Config:
         if ecc:
             from .ecc import secded_params
             secded_params(width)  # validates width range for ECC
+        if bank_depth < 1 or bank_width < 1:
+            raise ValueError("bank factors must be >= 1, got depth=%d width=%d"
+                             % (bank_depth, bank_width))
+        banked = bank_depth > 1 or bank_width > 1
+        if banked:
+            if not (kind.startswith("sram_") or kind == "rf_2r1w_ff"):
+                raise ValueError("banking is supported on sram_* / rf_2r1w_ff only, "
+                                 "not %s (FIFO ordering can't be tiled)" % kind)
+            if byte_en or ecc:
+                raise ValueError("banking excludes --byte-en / --ecc (plain slice/concat "
+                                 "data path only)")
+            if bank_width > 1 and width % bank_width != 0:
+                raise ValueError("--bank-width %d must divide width %d"
+                                 % (bank_width, width))
+            if bank_depth > 1:
+                if depth & (depth - 1):
+                    raise ValueError("--bank-depth requires power-of-2 depth, got %d" % depth)
+                if bank_depth & (bank_depth - 1):
+                    raise ValueError("--bank-depth must be a power of 2, got %d" % bank_depth)
+                if depth % bank_depth != 0:
+                    raise ValueError("--bank-depth %d must divide depth %d"
+                                     % (bank_depth, depth))
+                if depth // bank_depth < 2:
+                    raise ValueError("per-bank depth must be >= 2 (bank-depth %d too large "
+                                     "for depth %d)" % (bank_depth, depth))
         self.kind = kind
         self.depth = depth
         self.width = width
         self.byte_en = byte_en
         self.ecc = ecc
-        self.name = name or "khnum_%s_%dx%d%s%s" % (
-            kind, depth, width, "_be" if byte_en else "", "_ecc" if ecc else "")
+        self.bank_depth = bank_depth
+        self.bank_width = bank_width
+        self.banked = banked
+        bk = "_bk%dx%d" % (bank_depth, bank_width) if banked else ""
+        self.name = name or "khnum_%s_%dx%d%s%s%s" % (
+            kind, depth, width, "_be" if byte_en else "", "_ecc" if ecc else "", bk)
         self.aw = max(1, math.ceil(math.log2(depth)))
         self.lanes = width // 8 if byte_en else 1
 
@@ -70,6 +100,17 @@ class Config:
                 },
                 "children": [self.name + "_core", self.name + "_secded_enc",
                              self.name + "_secded_dec"],
+            }
+        elif self.banked:
+            extra = {
+                "banking": {
+                    "bank_depth": self.bank_depth,
+                    "bank_width": self.bank_width,
+                    "num_banks": self.bank_depth * self.bank_width,
+                    "bank_depth_words": self.depth // self.bank_depth,
+                    "bank_width_bits": self.width // self.bank_width,
+                },
+                "children": [self.name + "_mac"],
             }
         else:
             extra = {}
