@@ -95,10 +95,38 @@ design size.
 
 ## Next sizes
 
-Per ROADMAP.md P4: 2Kx64 remains. Watch `SYNTH_MEMORY_MAX_BITS`, routing
-congestion (retune utilization/density if `GRT-0232` appears, and prefer
-small clock-period steps per the lesson above), and peak route RAM per size —
-recipes that exceed ~13 GB peak need retuning before going bigger, per the
-16 GB laptop constraint (1024x32 at 7.80 GiB shows there's still headroom
-before 2Kx64, though 2Kx64's starting recipe already uses a lower
-utilization/looser clock than 1024x32's as a precaution).
+Per ROADMAP.md P4: 2Kx64 remains, **not yet closed**. Watch
+`SYNTH_MEMORY_MAX_BITS`, routing congestion (retune utilization/density if
+`GRT-0232` appears, and prefer small clock-period steps per the lesson
+above), and peak route RAM per size — recipes that exceed ~13 GB peak need
+retuning before going bigger, per the 16 GB laptop constraint (1024x32 at
+7.80 GiB shows there's still headroom before 2Kx64, though 2Kx64's starting
+recipe already uses a lower utilization/looser clock than 1024x32's as a
+precaution).
+
+`khnum_sram_1rw_2048x64` attempt 1 (`CORE_UTILIZATION=15`/`PLACE_DENSITY=0.40`,
+8.0 ns, ~18.3h wall time): **finished (exit 0, GDS produced) but NOT closed.**
+- Timing: WNS -0.48 ns, TNS -0.92 ns at 8.0 ns — clock too tight for this
+  design's datapath, same "each size needs its own budget" lesson as 1024x32.
+- Routing DRC: 0 violations (clean) — congestion is not the blocker here,
+  unlike 1024x32's saga.
+- Antenna: final signoff (`grt_antennas.log`, post-fill GDS-level check) found
+  **10 residual violations**, all met3/met4 side-area-ratio overages. During
+  the run itself, the routing-time antenna-repair loop visibly converged each
+  round (20 → 14 → 10 → 6 violations across successive
+  `Complete detail routing` cycles) — still trending down, not plateaued, when
+  it hit ORFS's default iteration cap (`MAX_REPAIR_ANTENNAS_ITER_GRT`/`_DRT`,
+  default 5 each, found in `flow/scripts/variables.yaml` inside the
+  `openroad/orfs` image — undocumented in this repo until now). Peak route RAM
+  ~12.06 GB (`5_2_route.odb` in the per-stage timing table), comfortably under
+  the 13 GB cap.
+
+Attempt 2 (launched immediately after diagnosing the above, same session):
+`clk_period` raised 8.0 → 8.5 ns (small step, per the non-monotonic-congestion
+lesson — routing was already clean at 8.0 ns so this shouldn't reintroduce
+congestion, just give timing more room) and
+`MAX_REPAIR_ANTENNAS_ITER_GRT=10`/`MAX_REPAIR_ANTENNAS_ITER_DRT=5` added to
+`config.mk` to let the antenna-repair loop run past its default cap toward
+the convergence it was already showing. Running in the background; update
+this section with the outcome once it finishes (~18h+ expected, same order of
+magnitude as attempt 1).
