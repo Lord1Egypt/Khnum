@@ -1,5 +1,54 @@
 # Khnum — live status tracker
 
+## ▶▶ SESSION 8 UPDATE (2026-07-12, in progress — attempt 2 still running)
+
+`khnum_sram_1rw_2048x64` (P4, third and last showcase size) attempt 1
+finished 2026-07-11 morning: exit 0, GDS produced, but **NOT closed** —
+WNS -0.48ns/TNS -0.92ns at 8.0ns, 0 route DRC, but 10 residual antenna
+violations (met3/met4 side-area ratio) in final signoff. Diagnosed root
+cause: ORFS's antenna-repair loop (`MAX_REPAIR_ANTENNAS_ITER_GRT`/`_DRT`,
+default 5 each, undocumented in this repo before now) was still converging
+(20→14→10→6 violations) when it hit its default iteration cap.
+
+**Attempt 2 launched same day** (container `sleepy_tharp`, log
+`/tmp/harden_2048_attempt2.log`): clock loosened 8.0→8.5ns + both antenna
+iteration caps raised (`MAX_REPAIR_ANTENNAS_ITER_GRT=10`,
+`MAX_REPAIR_ANTENNAS_ITER_DRT=5`) in
+`harden/designs/sky130hd/khnum_sram_1rw_2048x64/{config.mk,constraint.sdc}`.
+
+**Update as of 2026-07-12 ~01:00**: the clock loosening initially backfired
+hard (non-monotonic-congestion lesson struck again) — the first full
+detail-route pass spiked to **173,341 DRC violations** (vs attempt 1's
+peak of ~1,121), a scary ~150x jump. BUT it recovered: iteration-by-
+iteration rip-up-reroute drove it to 0 route DRC within ~3 hours
+(173,341→50,710→38,372→...→0). Then antenna repair converged cleanly across
+rounds: **416→69→4 violations** over 3 repair-reroute cycles (each itself
+closing to 0 route DRC). As of the last check, still running — round 4
+(for the last 4 antenna violations) has not yet been observed to finish.
+Total elapsed so far: ~13 hours (started ~12:23 on 2026-07-11).
+**Genuinely promising — likely closes within another 1-3 repair rounds if
+the pattern holds, but not yet confirmed closed. Do not assume success
+until a future check shows a final `HARDEN_OK` with 0 antenna violations
+AND WNS ≥ 0 (timing hasn't been re-checked yet at this clock — that's a
+separate thing to verify once routing/antenna fully close).**
+
+**On resume in any future session (context-cleared or new session)**:
+1. Check `docker ps -a` for a container still running the harden job, or
+   check if `/tmp/harden_2048_attempt2.log` exists and look at its tail —
+   note `/tmp/*` does NOT survive a reboot, only survives within this
+   machine session.
+2. If the container/process is gone and the log doesn't end in `HARDEN_OK`,
+   the run was lost (e.g. session/container killed) — just relaunch via
+   `bash tools/harden.sh khnum_sram_1rw_2048x64` (config already has the
+   attempt-2 settings baked in, no need to redo the tuning).
+3. If it DID finish, check for `HARDEN_OK` in the log tail, then check
+   `harden/reports/sky130hd/khnum_sram_1rw_2048x64/base/6_finish.rpt` for
+   WNS/TNS and `harden/reports/.../grt_antennas.log` for antenna violations
+   before declaring P4 closed. Update `harden/HARDEN_RESULTS.md`'s results
+   table, this file, `docs/GALLERY.md`, ROADMAP.md, and the
+   `project_khnum.md` memory file with the real outcome — do not mark
+   closed unless WNS ≥ 0 and 0 antenna violations are both confirmed.
+
 ## ▶▶ RESUME HERE (updated 2026-07-10, session 7)
 
 - **Phase:** P4 The Foundry (ASIC hardening) — **2/3 sizes timing-closed, 1/3 open**.
