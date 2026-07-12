@@ -121,12 +121,26 @@ precaution).
   ~12.06 GB (`5_2_route.odb` in the per-stage timing table), comfortably under
   the 13 GB cap.
 
-Attempt 2 (launched immediately after diagnosing the above, same session):
-`clk_period` raised 8.0 → 8.5 ns (small step, per the non-monotonic-congestion
-lesson — routing was already clean at 8.0 ns so this shouldn't reintroduce
-congestion, just give timing more room) and
-`MAX_REPAIR_ANTENNAS_ITER_GRT=10`/`MAX_REPAIR_ANTENNAS_ITER_DRT=5` added to
-`config.mk` to let the antenna-repair loop run past its default cap toward
-the convergence it was already showing. Running in the background; update
-this section with the outcome once it finishes (~18h+ expected, same order of
-magnitude as attempt 1).
+Attempt 2 (`clk_period` 8.0 → 8.5 ns,
+`MAX_REPAIR_ANTENNAS_ITER_GRT=10`/`MAX_REPAIR_ANTENNAS_ITER_DRT=5`, ~19h wall
+time): **finished (exit 0, `HARDEN_OK`, GDS produced) — close but still NOT
+closed.**
+- Routing DRC: 0 violations (clean) — the mid-run 150x DRC spike from the
+  clock change (173,341 violations on the first detail-route pass) fully
+  recovered via rip-up-reroute within ~3h; non-monotonic-congestion lesson
+  held (see above) but didn't block closure this time.
+- Timing: WNS 0.00 ns, TNS 0.00 ns, worst slack +0.32 ns at 8.5 ns —
+  genuinely closed.
+- Antenna: **still 1 residual violation** in both `grt_antennas.log` and
+  `drt_antennas.log` signoff (met4 side-area ratio, required 6959.96 vs
+  actual 9127.44), despite the repair loop converging the mid-run count all
+  the way down (416 → 69 → 4 → 1 across repair-reroute rounds) — doubling
+  the iteration cap got very close but not to 0.
+
+Attempt 3 (launched immediately, same session): caps raised further to
+`MAX_REPAIR_ANTENNAS_ITER_GRT=20`/`MAX_REPAIR_ANTENNAS_ITER_DRT=10`, clock
+left at 8.5 ns (already closed, no reason to touch it). Running in the
+background; update this section with the outcome once it finishes. If a
+3rd attempt still leaves a stubborn residual violation, the next lever is
+likely a design-level fix (antenna diode cell sizing/placement) rather than
+another blind cap increase.
