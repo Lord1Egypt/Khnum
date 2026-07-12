@@ -1,6 +1,31 @@
 # Khnum — live status tracker
 
-## ▶▶ SESSION 8 UPDATE (2026-07-12, in progress — attempt 2 still running)
+## ▶▶ SESSION 8 UPDATE (2026-07-12, in progress — attempt 3 now running)
+
+**Attempt 2 finished** (~19h wall time, container `sleepy_tharp`, exit 0,
+`HARDEN_OK`): **close but NOT closed.** Route DRC 0 (clean), timing WNS
+0.00ns/TNS 0.00ns/worst slack +0.32ns at 8.5ns (genuinely closed), GDS
+produced (`harden/results/.../6_final.gds`, 777 MB) — but `grt_antennas.log`
+AND `drt_antennas.log` signoff both still show **1 residual antenna
+violation** (met4 side-area ratio, required 6959.96 vs actual 9127.44), even
+after doubling the repair-iteration cap to 10/5. 2 of 3 closure conditions
+met; do not count this as P4 closed.
+
+**Attempt 3 launched immediately after** (container `stupefied_hugle`, log
+`/tmp/harden_2048_attempt3.log`): same 8.5ns clock (timing was already
+clean, no reason to touch it), `MAX_REPAIR_ANTENNAS_ITER_GRT`/`_DRT` raised
+further to 20/10. Did NOT delete attempt 2's results/reports/GDS before
+relaunch (auto-mode classifier correctly flagged that as an unrequested
+destructive action on hours of compute) — `make` overwrites stage outputs
+in place as it re-runs, no manual cleaning needed. On resume: check
+`docker ps -a` / `/tmp/harden_2048_attempt3.log` tail for `HARDEN_OK`, then
+verify WNS/TNS in `6_finish.rpt` AND 0 violations in both
+`grt_antennas.log`/`drt_antennas.log` before any closure claim. If this
+also doesn't fully close antenna, the next lever is probably a design-level
+fix (diode insertion tuning, `ANTENNA_CELL` sizing) rather than another
+blind cap bump — flag to Mohamed if attempt 3 doesn't finish it.
+
+## ▶▶ SESSION 8 UPDATE — SUPERSEDED (attempt 2, 2026-07-12 early)
 
 `khnum_sram_1rw_2048x64` (P4, third and last showcase size) attempt 1
 finished 2026-07-11 morning: exit 0, GDS produced, but **NOT closed** —

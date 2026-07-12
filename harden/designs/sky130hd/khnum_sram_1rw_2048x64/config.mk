@@ -24,5 +24,13 @@ export SYNTH_MEMORY_MAX_BITS = 262144
 # (MAX_REPAIR_ANTENNAS_ITER_GRT/_DRT, default 5 each) was still trending down
 # (20->14->10->6 violations across rounds) when it hit its iteration cap, not
 # plateaued -- so more rounds should converge it. Raised both past default.
-export MAX_REPAIR_ANTENNAS_ITER_GRT = 10
-export MAX_REPAIR_ANTENNAS_ITER_DRT = 5
+#
+# Attempt 2 (8.5ns, caps 10/5) also finished exit 0, closer but still NOT
+# closed: 0 route DRC, WNS 0.00/TNS 0.00 (timing genuinely closed at 8.5ns),
+# but grt_antennas.log AND drt_antennas.log both still show 1 residual net
+# (met4 side-area ratio, required 6959.96 vs actual 9127.44) even after the
+# doubled cap. Raising both caps again for attempt 3 -- 1 stubborn violation
+# suggests a couple more repair rounds may finish the job, same pattern as
+# 1024x32 needing 5 tuning passes before closing.
+export MAX_REPAIR_ANTENNAS_ITER_GRT = 20
+export MAX_REPAIR_ANTENNAS_ITER_DRT = 10
