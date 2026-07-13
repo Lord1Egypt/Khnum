@@ -108,9 +108,13 @@ peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules
       6.2 ns after 5 tuning attempts, 0 DRC, 0 antenna violations) — see
       `harden/HARDEN_RESULTS.md` for the full iteration history, including a
       non-monotonic clock-period-vs-congestion interaction worth knowing before
-      tuning the next size. 2K×64 still open (config prepped in
-      `harden/designs/sky130hd/khnum_sram_1rw_2048x64/`, not yet run; watch
-      `SYNTH_MEMORY_MAX_BITS` — must exceed each design's bit count).
+      tuning the next size. `khnum_sram_1rw_2048x64` **routed + timing-closed
+      (WNS 0.00, 0 route DRC) but NOT antenna-clean** after 3 tuning attempts
+      (antenna-repair iteration cap raised 5→10→20, plateaued at 1 residual
+      DRT-level violation on a clock-buffer net) — paused per Mohamed's
+      2026-07-13 call rather than keep burning ~20h Docker runs on cap bumps;
+      next lever if resumed is a targeted antenna-diode fix, not another cap
+      increase. See `harden/HARDEN_RESULTS.md`/`STATUS.md` for full numbers.
 - [x] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
       utilization, routing effort) — the 16 GB promise is a release gate.
       `khnum_sram_1rw_256x32`: 2.11 GiB peak. `khnum_sram_1rw_1024x32`: 7.80 GiB

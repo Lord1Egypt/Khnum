@@ -95,7 +95,10 @@ design size.
 
 ## Next sizes
 
-Per ROADMAP.md P4: 2Kx64 remains, **not yet closed**. Watch
+Per ROADMAP.md P4: 2Kx64 remains, **routed and timing-closed but not fully
+antenna-clean — 1 known residual violation after 3 tuning attempts,
+plateaued (see table + writeup below); paused rather than continuing to
+raise iteration caps**. Watch
 `SYNTH_MEMORY_MAX_BITS`, routing congestion (retune utilization/density if
 `GRT-0232` appears, and prefer small clock-period steps per the lesson
 above), and peak route RAM per size — recipes that exceed ~13 GB peak need
@@ -137,10 +140,28 @@ closed.**
   the way down (416 → 69 → 4 → 1 across repair-reroute rounds) — doubling
   the iteration cap got very close but not to 0.
 
-Attempt 3 (launched immediately, same session): caps raised further to
-`MAX_REPAIR_ANTENNAS_ITER_GRT=20`/`MAX_REPAIR_ANTENNAS_ITER_DRT=10`, clock
-left at 8.5 ns (already closed, no reason to touch it). Running in the
-background; update this section with the outcome once it finishes. If a
-3rd attempt still leaves a stubborn residual violation, the next lever is
-likely a design-level fix (antenna diode cell sizing/placement) rather than
-another blind cap increase.
+Attempt 3 (caps raised further to `MAX_REPAIR_ANTENNAS_ITER_GRT=20`/
+`MAX_REPAIR_ANTENNAS_ITER_DRT=10`, clock left at 8.5 ns, ~24h wall time):
+**finished (exit 0, `HARDEN_OK`, GDS produced) — same plateau.**
+- Routing DRC: 0 violations (clean).
+- Timing: WNS 0.00 ns, TNS 0.00 ns, worst slack +0.40 ns — closed, slightly
+  better margin than attempt 2.
+- Antenna: `grt_antennas.log` now clean (0 violations, improved from
+  attempt 2's 1) but `drt_antennas.log` signoff still shows **1 residual
+  violation** (met4 side-area ratio, required 5564.60 vs actual 7646.72,
+  on a different net than attempt 2's but the same profile — a
+  `clkdlybuf4s50`-driven high-fanout clock-buffer net).
+
+**Summary across all 3 attempts**: antenna cap 5→10→20 drove signoff
+violations 10 → 2 (1 grt + 1 drt) → 1 (drt only) — real but sharply
+diminishing progress. This looks like a genuine ceiling for cap-bumping
+alone: the same class of net (clock-buffer output, inherently high
+fanout/wire area) keeps landing just over the antenna ratio no matter how
+many repair rounds are allowed. **Decision: pause here rather than launch a
+4th multi-hour attempt with an even higher cap** — the next productive
+lever is a targeted one (antenna diode cell sizing/insertion near that
+specific net class, or CTS-level buffering/net splitting), not another
+blind iteration-cap increase. `khnum_sram_1rw_2048x64` is therefore
+**documented as: routed, timing-closed, 1 known residual antenna
+violation** — not counted as a fully clean P4 close until that specific
+lever is tried.
