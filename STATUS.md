@@ -1,6 +1,39 @@
 # Khnum — live status tracker
 
-## ▶▶ SESSION 8 UPDATE (2026-07-13) — 2048x64 PLATEAUED at 1 antenna violation after 3 attempts; paused for a design-level fix
+## ▶▶ SESSION 9 UPDATE (2026-07-13/14) — targeted lever TRIED: surgical post-route antenna repair; plateau proven structural, attempt-3 state stands
+
+The targeted fix flagged below (attempt-3 pause note) was executed: two
+surgical `repair_antennas` sessions run directly on attempt 3's finished
+`5_2_route.odb` via ORFS's `make run RUN_SCRIPT=...` hook — no flow rerun,
+~7h each, fail path writes nothing so the attempt-3 database/GDS were never
+at risk. Scripts live in the design dir (`fix_antenna.tcl`,
+`fix_antenna2.tcl`); full measured writeup in `harden/HARDEN_RESULTS.md`
+(attempts 4-5 section). Net results:
+
+- Jumper-only repair: useless on this net class (no legal layer hop).
+- The plateau mechanism is now measured, not guessed: repair sizes diodes
+  for the wire it sees, the post-repair reroute regrows the wire ~37% past
+  the new protection — always one reroute behind.
+- A margin-40 overshoot pass DID durably fix the original violating net
+  (net71944 never came back)…
+- …but repair churn conserves the problem: margin passes rip hundreds-to-
+  thousands of near-limit nets and the reroute mints new violations of the
+  same class (fanout-1 delay-chain sinks with die-spanning met3/met4
+  wires). Escalating margins diverges (1→61→89); margin-40 + bare cleanup
+  converges (103→15→5→3) but floors at 3 nets whose wires outgrow even
+  25-50 stacked diodes (partials 14358/15458/21846 vs base 400).
+
+**Conclusion: a ~1-3 violation floor is structural to this tool version's
+repair-then-reroute cycle for this design.** Attempt 3 (1 violation,
+WNS 0.00/TNS 0.00, slack +0.40, 0 route DRC, complete GDS) is a
+near-optimal point of that dynamic and remains the shipping candidate.
+Genuine 0-violation paths are all full ~24h reruns: long-net routing on
+met5, pre-route wire-length buffering, or a newer OpenROAD image —
+**decision on whether to spend that compute belongs to Mohamed (pending
+as of this update)**. P4 third size stays honestly documented as
+"routed + timing-closed + 1 known residual antenna violation".
+
+## ▶▶ SESSION 8 UPDATE — SUPERSEDED (2026-07-13) — 2048x64 PLATEAUED at 1 antenna violation after 3 attempts; paused for a design-level fix
 
 Three tuning attempts on `khnum_sram_1rw_2048x64`, each ~19-24h wall time,
 all via `bash tools/harden.sh khnum_sram_1rw_2048x64` in Docker

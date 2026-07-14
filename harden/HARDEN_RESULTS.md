@@ -165,3 +165,44 @@ blind iteration-cap increase. `khnum_sram_1rw_2048x64` is therefore
 **documented as: routed, timing-closed, 1 known residual antenna
 violation** — not counted as a fully clean P4 close until that specific
 lever is tried.
+
+Attempts 4-5 (2026-07-13/14, the targeted lever): **surgical post-route
+repair on attempt 3's finished route database** — no flow rerun, standalone
+`repair_antennas` sessions via ORFS's `make run RUN_SCRIPT=...` hook on the
+existing `5_2_route.odb` (scripts: `fix_antenna.tcl` / `fix_antenna2.tcl` in
+the design dir; ~7h each vs ~24h for a full attempt; fail path writes
+nothing, so the attempt-3 state was never at risk). Both ended **NOT
+closed**, but they turned the plateau from a mystery into measured tool
+behavior:
+
+- **Jumper insertion can't touch this net class.** Three
+  `repair_antennas -jumper_only` passes (margins 10/30/50) inserted nothing
+  usable on the violating net — no legal layer hop.
+- **Why the flow's own loop plateaued**: `repair_antennas` sizes diode
+  protection for the wire it *sees*, then the post-repair incremental
+  reroute regrows the wire past the new protection (attempt 3's final
+  numbers: required 5564.60 after diode stacking, rerouted wire at
+  7646.72 — ~37% growth). Protection is always one reroute behind.
+- **Overshoot works on the target**: a single
+  `repair_antennas -ratio_margin 40` pass (protection sized 40% beyond the
+  seen wire) durably fixed the original violating net — it never reappeared.
+- **But repair churn conserves the problem**: every margin pass rips every
+  net within the margin of the limit (848 nets at margin 20, ~3400 at
+  margin 50), and the resulting reroute mints NEW violations of the same
+  class elsewhere. Escalating margins diverges (1 → 61 → 89). Margin-40
+  once + bare margin-0 cleanup passes converges (103 → 15 → 5 → 3) but
+  plateaus at 3: three fanout-1 delay-chain nets (`clkdlybuf4s50`,
+  `dlygate4sd2`, one `a22oi` sink) with die-spanning wires whose met3/met4
+  side-area partials (14358 / 15458 / 21846 vs base 400) outgrow even
+  25-50 stacked diodes' worth of protection (required ratios ratcheted to
+  9937-20883 and still lost).
+
+**Conclusion**: on this ORFS/OpenROAD image the repair-then-reroute cycle
+has a structural floor of ~1-3 violations for this design — each individual
+pathological net is fixable, but fixing it reroutes and breaks another of
+the same class. Attempt 3's single violation is a near-optimal point of
+that dynamic, and its database/GDS remain the shipping candidate
+(WNS 0.00, TNS 0.00, worst slack +0.40 ns, 0 route DRC, GDS complete).
+Genuine fixes are upstream of routing — force long clock/delay nets onto
+met5 (looser antenna profile), pre-route wire-length buffering, or a newer
+OpenROAD with improved antenna repair — all requiring a fresh ~24h run.
