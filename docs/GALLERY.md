@@ -36,3 +36,22 @@ congestion).
 ### Routing detail
 
 ![khnum_sram_1rw_1024x32 routing](gallery/khnum_sram_1rw_1024x32_sky130hd_routing.webp)
+
+## `khnum_sram_1rw_2048x64` — sky130hd
+
+2048 x 64 single-port SRAM (128 Kbit, the largest showcase size), hardened to
+standard-cell flip-flop RAM. 6,261,386 µm², 19% utilization, timing closes at
+8.5 ns (WNS 0.00 ns, worst slack +0.40 ns), 0 routing DRC violations, **1 known
+residual antenna violation** — accepted and documented rather than hidden:
+five repair attempts (three full flow runs plus two surgical post-route
+sessions) measured the violation floor as structural to this OpenROAD
+version's repair-then-reroute cycle on die-spanning delay-chain nets. Full
+evidence trail: `harden/HARDEN_RESULTS.md`.
+
+### Full routed layout
+
+![khnum_sram_1rw_2048x64 routed layout](gallery/khnum_sram_1rw_2048x64_sky130hd.webp)
+
+### Routing detail
+
+![khnum_sram_1rw_2048x64 routing](gallery/khnum_sram_1rw_2048x64_sky130hd_routing.webp)

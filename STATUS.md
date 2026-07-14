@@ -28,10 +28,14 @@ repair-then-reroute cycle for this design.** Attempt 3 (1 violation,
 WNS 0.00/TNS 0.00, slack +0.40, 0 route DRC, complete GDS) is a
 near-optimal point of that dynamic and remains the shipping candidate.
 Genuine 0-violation paths are all full ~24h reruns: long-net routing on
-met5, pre-route wire-length buffering, or a newer OpenROAD image —
-**decision on whether to spend that compute belongs to Mohamed (pending
-as of this update)**. P4 third size stays honestly documented as
-"routed + timing-closed + 1 known residual antenna violation".
+met5, pre-route wire-length buffering, or a newer OpenROAD image.
+**Mohamed's decision (2026-07-14): ACCEPT AS-IS** — 2048x64 ships
+documented as "timing-closed, 0 route DRC, 1 known antenna violation
+(structural tool floor)"; **P4 is CLOSED** on that basis (all 3 sizes
+have GDSII, 2 fully clean). Gallery/characterization/ROADMAP/README
+updated in the close-out PR. Remaining to v1.0.0: P5 gh-pages activation
+and P6 PyPI + GitHub Release — both public-publish actions still needing
+Mohamed's explicit go-ahead per standing policy.
 
 ## ▶▶ SESSION 8 UPDATE — SUPERSEDED (2026-07-13) — 2048x64 PLATEAUED at 1 antenna violation after 3 attempts; paused for a design-level fix
 

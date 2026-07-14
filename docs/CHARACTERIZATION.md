@@ -2,7 +2,8 @@
 
 Do not hand-edit — regenerate with `python3 tools/characterize.py`. Full context and gotchas: `harden/HARDEN_RESULTS.md`.
 
-| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | antenna | peak route RAM | closes |
+| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | antenna | peak route RAM | timing closes |
 |--------|----------|---------:|-----------:|:----:|---------:|:---------:|--------:|----------------:|:------:|
 | `khnum_sram_1rw_1024x32` | sky130hd | 154 | 1533880 | 25% | 0.00 | 0 viol | 0 | 7.80 GB | ✅ |
+| `khnum_sram_1rw_2048x64` | sky130hd | 741 | 6261386 | 19% | 0.00 | 0 viol | 1 | 11.76 GB | ✅ |
 | `khnum_sram_1rw_256x32` | sky130hd | 28 | 374736 | 43% | 0.00 | 0 viol | 0 | 2.11 GB | ✅ |

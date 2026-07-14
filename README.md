@@ -39,7 +39,7 @@ a niche neither covers:
 | Formal proof per instance | ✅ embedded in every SRAM/FIFO instance, discharged via yosys-smtbmc + z3, vacuity-checked, mutation-tested | — | — |
 | ECC (SECDED) option | ✅ `--ecc` on any SRAM (single-correct, double-detect) | — | — |
 | FPGA + ASIC from one config | ✅ portable RTL (BRAM-inference verified in P3) | ASIC only | ASIC only |
-| PDK strategy | portable RTL + OpenROAD/ORFS hardening recipes (Sky130 proven, ASAP7 stretch) — P4 in progress | Sky130 / SCMOS / FreePDK45 | Sky130 |
+| PDK strategy | portable RTL + OpenROAD/ORFS hardening recipes (Sky130 proven on 3 sizes up to 128 Kbit, ASAP7 stretch) | Sky130 / SCMOS / FreePDK45 | Sky130 |
 | Runs comfortably on a 16 GB laptop | ✅ **hard design constraint** | heavy | moderate |
 
 Khnum's bet: **most designs don't need a hand-crafted 6T bitcell macro** — they need
@@ -141,9 +141,11 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan with checklists, and
   byte-lane, FIFO occupancy, gray-pointer) all non-vacuous and mutation-tested
 - **P3 The FPGA Gate** ✅ — automated BRAM/SPRAM-inference verification (yosys
   `synth_xilinx`/`synth_ice40`), 12/12 configs proven
-- **P4 The Foundry** 🔧 — OpenROAD/ORFS hardening (Sky130), 16 GB-safe; two sizes
-  timing-closed, one still open — see
-  [harden/HARDEN_RESULTS.md](harden/HARDEN_RESULTS.md)
+- **P4 The Foundry** ✅ — OpenROAD/ORFS hardening (Sky130), 16 GB-safe; all 3
+  showcase sizes (up to 2048×64 = 128 Kbit) have timing-closed GDSII. Two are
+  fully clean; the largest carries 1 known, documented antenna violation
+  (measured as structural to the tool's repair cycle — evidence trail in
+  [harden/HARDEN_RESULTS.md](harden/HARDEN_RESULTS.md))
 - **P5 The Scribe** 🔧 — characterization tables ✅, terminal demo GIF ✅, integration
   docs ✅; gh-pages content pushed, activation pending
 - **P6 Ascension** — v1.0.0: PyPI release, GitHub release, stability guarantees
