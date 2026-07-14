@@ -86,7 +86,7 @@ def main():
         "Do not hand-edit — regenerate with `python3 tools/characterize.py`. "
         "Full context and gotchas: `harden/HARDEN_RESULTS.md`.",
         "",
-        "| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | antenna | peak route RAM | closes |",
+        "| design | platform | GDS (MB) | area (µm²) | util | WNS (ns) | route DRC | antenna | peak route RAM | timing closes |",
         "|--------|----------|---------:|-----------:|:----:|---------:|:---------:|--------:|----------------:|:------:|",
     ]
     for r in rows:

@@ -101,27 +101,29 @@ peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules
 - [x] `tools/harden.sh`: wraps Docker with `--memory=13g --memory-swap=24g`
       (Docker-swap OOM lesson) and produces GDS + DEF + reports into `harden/results/`
       (gitignored — regenerable, multi-GB scale, same as KemetCore's `flow/`)
-- [ ] `harden/` directory: ORFS config per showcase size (e.g. 256×32, 1K×32, 2K×64)
+- [x] `harden/` directory: ORFS config per showcase size (256×32, 1K×32, 2K×64)
       for **sky130hd** using the local Docker openroad/orfs image (same as KemetCore
-      `flow/harden.sh` pattern). **2/3 fully closed**: `khnum_sram_1rw_256x32`
-      (timing closed, 0 DRC) and `khnum_sram_1rw_1024x32` (timing closed at
-      6.2 ns after 5 tuning attempts, 0 DRC, 0 antenna violations) — see
-      `harden/HARDEN_RESULTS.md` for the full iteration history, including a
-      non-monotonic clock-period-vs-congestion interaction worth knowing before
-      tuning the next size. `khnum_sram_1rw_2048x64` **routed + timing-closed
-      (WNS 0.00, 0 route DRC) but NOT antenna-clean** after 3 tuning attempts
-      (antenna-repair iteration cap raised 5→10→20, plateaued at 1 residual
-      DRT-level violation on a clock-buffer net) — paused per Mohamed's
-      2026-07-13 call rather than keep burning ~20h Docker runs on cap bumps;
-      next lever if resumed is a targeted antenna-diode fix, not another cap
-      increase. See `harden/HARDEN_RESULTS.md`/`STATUS.md` for full numbers.
+      `flow/harden.sh` pattern). **All 3 sizes have complete GDSII.**
+      `khnum_sram_1rw_256x32` and `khnum_sram_1rw_1024x32` fully clean (timing
+      closed, 0 DRC, 0 antenna). `khnum_sram_1rw_2048x64` timing-closed
+      (WNS 0.00, slack +0.40 ns at 8.5 ns) with 0 route DRC and **1 known
+      residual antenna violation, accepted per Mohamed's 2026-07-14 decision**:
+      five repair attempts (3 full flow runs with cap escalation 5→10→20, then
+      2 surgical post-route `repair_antennas` sessions with jumper/margin
+      strategies) measured the ~1-3 violation floor as structural to this
+      OpenROAD version's repair-then-reroute cycle on die-spanning delay-chain
+      nets — full evidence in `harden/HARDEN_RESULTS.md` (attempts 4-5
+      section). Genuine 0-violation paths (met5 long-net routing, pre-route
+      wire-length buffering, newer ORFS image) are documented there if ever
+      revisited.
 - [x] Record peak RSS per recipe; any recipe > 14 GB must be re-tuned (smaller
       utilization, routing effort) — the 16 GB promise is a release gate.
       `khnum_sram_1rw_256x32`: 2.11 GiB peak. `khnum_sram_1rw_1024x32`: 7.80 GiB
-      peak. Both comfortably clear of the 13-14 GB ceiling.
+      peak. `khnum_sram_1rw_2048x64`: ~12.06 GiB peak (route stage) — under the
+      13 GB cap, and the ceiling for sky130hd sizes on this laptop.
 - [x] GDS gallery in `docs/GALLERY.md` (screenshots via ORFS's own auto-generated
       KLayout renders, `harden/reports/.../final_*.webp` — no separate klayout
-      invocation needed). 1 design so far; grows with each new size.
+      invocation needed). All 3 showcase sizes included.
 - [ ] Stretch: ASAP7 variants (KemetCore flow already proves local ASAP7 works)
 - [ ] Liberty/LEF abstract stubs emitted alongside GDS for SoC integration
 
