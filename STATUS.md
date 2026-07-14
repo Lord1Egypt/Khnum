@@ -1,6 +1,24 @@
 # Khnum — live status tracker
 
-## ▶▶ SESSION 9 UPDATE (2026-07-13/14) — targeted lever TRIED: surgical post-route antenna repair; plateau proven structural, attempt-3 state stands
+## ▶▶ 🎉 v1.0.0 SHIPPED (2026-07-14) — ALL 7 PHASES CLOSED, project COMPLETE
+
+With Mohamed's explicit go-ahead for both public-publish steps:
+
+- **PyPI**: khnum-ram 1.0.0 LIVE — https://pypi.org/project/khnum-ram/
+  (twine check PASSED; verified by installing from live PyPI in a fresh
+  venv: `khnum 1.0.0`, generates RTL)
+- **GitHub Release**: v1.0.0 with wheel + sdist assets —
+  https://github.com/Lord1Egypt/Khnum/releases/tag/v1.0.0
+- **Landing page**: LIVE — https://lord1egypt.github.io/Khnum/ (HTTP 200)
+- **Repo About**: shipped wording + `pip install khnum-ram` + homepage link
+- P0-P3 ✅, P4 ✅ (3 sky130 GDSII sizes; 2048x64 accepted with 1 documented
+  structural antenna violation), P5 ✅, P6 ✅. Stretch items (ASAP7,
+  Liberty/LEF stubs) remain the only unchecked ROADMAP boxes — explicitly
+  post-1.0 nice-to-haves.
+
+Nothing is open. Future sessions: only stretch work or maintenance.
+
+## ▶▶ SESSION 9 UPDATE — SUPERSEDED (2026-07-13/14) — targeted lever TRIED: surgical post-route antenna repair; plateau proven structural, attempt-3 state stands
 
 The targeted fix flagged below (attempt-3 pause note) was executed: two
 surgical `repair_antennas` sessions run directly on attempt 3's finished

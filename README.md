@@ -7,8 +7,9 @@
 One command gives you verified, synthesizable RTL for SRAMs, register files, FIFOs,
 ECC-protected memories and banked/tiled composites — each instance shipped **with its own
 self-checking testbench, manifest, embedded formal proof (yosys+z3, vacuity-checked,
-mutation-tested), proven FPGA BRAM inference, and (in progress) an OpenROAD ASIC
-hardening recipe** — and the whole flow is engineered to fit in **16 GB of RAM**.
+mutation-tested), proven FPGA BRAM inference, and pre-tuned OpenROAD ASIC hardening
+recipes (three sky130 GDSII-proven sizes up to 128 Kbit)** — and the whole flow is
+engineered to fit in **16 GB of RAM**.
 
 <p align="center"><img src="docs/demo.gif" alt="Khnum terminal demo" width="700"/></p>
 
@@ -20,7 +21,8 @@ khnum: wrote build/khnum_sram_1rw_1024x32_be.manifest.json
 khnum: khnum_sram_1rw_1024x32_be ready — 1024 words x 32 bits = 32 Kib, addr 10 bits, RDW read-first
 ```
 
-No pip installs. No PDK downloads. No 64 GB build server. Python 3 standard library only.
+No dependencies. No PDK downloads. No 64 GB build server. Python 3 standard library only.
+Install the CLI from PyPI (`pip install khnum-ram` → `khnum gen ...`) or just clone and run.
 
 ---
 
@@ -148,7 +150,7 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan with checklists, and
   [harden/HARDEN_RESULTS.md](harden/HARDEN_RESULTS.md))
 - **P5 The Scribe** 🔧 — characterization tables ✅, terminal demo GIF ✅, integration
   docs ✅; gh-pages content pushed, activation pending
-- **P6 Ascension** — v1.0.0: PyPI release, GitHub release, stability guarantees
+- **P6 Ascension** ✅ — **v1.0.0 SHIPPED**: [`pip install khnum-ram`](https://pypi.org/project/khnum-ram/) · [GitHub Release](https://github.com/Lord1Egypt/Khnum/releases/tag/v1.0.0) · [landing page](https://lord1egypt.github.io/Khnum/)
 
 ## Project lineage
 
