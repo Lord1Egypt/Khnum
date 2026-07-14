@@ -126,7 +126,7 @@ A memory generator you can't trust is worse than no generator. Khnum's rule:
 ## The 16 GB promise
 
 Khnum is developed **on a 16 GB laptop, for 16 GB laptops**. Generation is O(KB) of text.
-Simulation is Verilator. Hardening recipes (roadmap P4) are pre-tuned OpenROAD/ORFS
+Simulation is Verilator. Hardening recipes (P4, shipped) are pre-tuned OpenROAD/ORFS
 configurations validated to peak **below 14 GB**, so students, hobbyists and engineers in
 the 99 % of the world without a server farm can go RTL → GDSII.
 
