@@ -140,14 +140,20 @@ peak < 14 GB RSS (16 GB laptop with WSL2 headroom — see CLAUDE.md memory rules
 - [x] `docs/INTEGRATION.md`: how to drop Khnum memories into a SoC (KemetCore's
       SethCore register file as a worked, honestly-caveated example)
 
-## P6 — Ascension (v1.0.0)
+## P6 — Ascension (v1.0.0) ✅ SHIPPED 2026-07-14
 
-- [ ] `pyproject.toml` finalized; publish **khnum-ram** to PyPI (token in
-      `~/.skillforge_tokens`; follow Seshat's release playbook)
-- [ ] `pip install khnum-ram` → `khnum` console script works
-- [ ] GitHub Release v1.0.0 with changelog
-- [ ] README final pass: every claim true, comparison table updated, demo GIF live
-- [ ] Announce-ready: repo About, topics, social preview
+- [x] `pyproject.toml` finalized; **khnum-ram 1.0.0 LIVE on PyPI**
+      (https://pypi.org/project/khnum-ram/ — twine check PASSED, uploaded with
+      Mohamed's explicit go-ahead)
+- [x] `pip install khnum-ram` → `khnum` console script works — verified in a
+      fresh venv installing from live PyPI (`khnum 1.0.0`, generates RTL)
+- [x] GitHub Release v1.0.0 with changelog + wheel/sdist assets
+      (https://github.com/Lord1Egypt/Khnum/releases/tag/v1.0.0)
+- [x] README final pass: every claim true, comparison table updated, demo GIF live
+- [x] Announce-ready: repo About updated (shipped wording, `pip install
+      khnum-ram`, homepage → landing page), 12 topics already set. (Social
+      preview image is web-UI-only — not settable via API, left as a manual
+      nice-to-have.)
 
 ---
 
